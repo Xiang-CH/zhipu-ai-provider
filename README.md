@@ -1,43 +1,40 @@
 # Zhipu AI Provider - Vercel AI SDK Community Provider
-
-
-## TODO
-Change the following files:
-- [o] zhipu-provider.ts
-- [o] zhipu-chat-prompt.ts
-- [o] zhipu-embedding-settings.ts
-- [o] convert-to-zhipu-chat-messages.test.ts
-- [o] map-zhipu-finish-reason.ts
-- [o] zhipu-chat-settings.ts
-- [o] zhipu-error.ts
-- [o] convert-to-zhipu-chat-messages.ts
-- [ ] mistral-chat-language-model.test.ts
-- [o] zhipu-embedding-model.test.ts
-- [o] zhipu-prepare-tools.ts
-- [o] get-response-metadata.ts
-- [o] mistral-chat-language-model.ts
-- [o] zhipu-embedding-model.ts
-- [ ] index.ts
+This is a [Zhipu](https://www.zhipuai.cn/) prodiver for the [Vercel AI](https://sdk.vercel.ai/) SDK. It enables seamless integration with **GLM** and Embedding Models provided on [bigmodel.cn](https://bigmodel.cn/).
 
 
 ## Setup
 
-
 ```bash
-
+npm i zhipu-ai-provider
+export ZHIPU_API_KEY=<your-api-key>
 ```
-
-## Provider Instance
 
 
 ```ts
+import { zhipu } from 'zhipu-ai-provider'
+```
+or
+```ts
+import { createZhipu } from 'zhipu-ai-provider';
+
+const zhipu = createZhipu({
+  baseURL: "https://open.bigmodel.cn/api/paas/v4",
+  apiKey: "your-api-key"
+});
 ```
 
 ## Example
 
 ```ts
+import { zhipu } from 'zhipu-ai-provider';
+
+const { text } = await generateText({
+  model: zhipu('glm-4-plus'),
+  prompt: 'Why is the sky blue?',
+});
+
+console.log(result)
 ```
 
 ## Documentation
-
-Please check out the **[Zhipu provider](https://bigmodel.cn/dev/welcome)** for more information.
+Please check out the **[Zhipu documentation](https://bigmodel.cn/dev/welcome)** for more information.
