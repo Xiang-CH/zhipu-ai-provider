@@ -10,7 +10,7 @@ const TEST_PROMPT: LanguageModelV1Prompt = [
   { role: "user", content: [{ type: "text", text: "Hello" }] },
 ];
 
-const TEST_API_KEY = "70cf6b9542564a69a791632927b63d4e";
+const TEST_API_KEY = "test-api-key";
 const provider = createZhipu({
   apiKey: TEST_API_KEY,
 });
