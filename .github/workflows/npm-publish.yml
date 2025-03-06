@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node ✨
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           registry-url: https://registry.npmjs.org/
           cache: pnpm
 
@@ -37,4 +37,4 @@ jobs:
         shell: bash
         run: pnpm publish --access public --no-git-checks
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
