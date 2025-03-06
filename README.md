@@ -5,15 +5,26 @@ This is a [Zhipu](https://www.zhipuai.cn/) prodiver for the [Vercel AI](https://
 ## Setup
 
 ```bash
+# npm
 npm i zhipu-ai-provider
-export ZHIPU_API_KEY=<your-api-key>
+
+# pnpm
+pnpm add zhipu-ai-provider
+
+# yarn
+yarn add zhipu-ai-provider
+```
+Set up your `.env` file / environment with your API key.
+```bash
+ZHIPU_API_KEY=<your-api-key>
 ```
 
-
+## Provider Instance
+You can import the default provider instance `zhipu` from `zhipu-ai-provider` (This automatically reads the API key from the environment variable `ZHIPU_API_KEY`):
 ```ts
 import { zhipu } from 'zhipu-ai-provider'
 ```
-or
+Alternatively, you can create a provider instance with custom configuration with `createZhipu`:
 ```ts
 import { createZhipu } from 'zhipu-ai-provider';
 
@@ -22,6 +33,13 @@ const zhipu = createZhipu({
   apiKey: "your-api-key"
 });
 ```
+You can use the following optional settings to customize the Zhipu provider instance:
+- **baseURL**: *string*
+  - Use a different URL prefix for API calls, e.g. to use proxy servers. The default prefix is `https://open.bigmodel.cn/api/paas/v4`.
+- **apiKey**: *string*
+  - Your API key for Zhipu [BigModel Platform](https://bigmodel.cn/). If not provided, the provider will attempt to read the API key from the environment variable `ZHIPU_API_KEY`.
+- **headers**: *Record<string,string>*
+  - Custom headers to include in the requests.
 
 ## Example
 
@@ -37,4 +55,5 @@ console.log(result)
 ```
 
 ## Documentation
-Please check out the **[Zhipu documentation](https://bigmodel.cn/dev/welcome)** for more information.
+- **[Zhipu documentation](https://bigmodel.cn/dev/welcome)** 
+- **[Vercel AI SDK documentation](https://sdk.vercel.ai/docs/introduction)**
