@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          registry-url: https://registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          registry-url: https://registry.npmjs.org/
           cache: pnpm
 
       - name: Install dependencies 📦️
@@ -32,6 +32,9 @@ jobs:
 
       - name: Build 🔨
         run: pnpm build
+
+      - name: config npm registry
+        run: pnpm config set registry https://registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
       
       - name: Publish 🚀
         shell: bash
