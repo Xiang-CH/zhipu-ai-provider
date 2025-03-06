@@ -26,8 +26,8 @@ import { prepareTools } from "./zhipu-prepare-tools";
 type ZhipuChatConfig = {
   provider: string;
   baseURL: string;
-  isMultiModel: boolean;
-  isReasoningModel: boolean;
+  isMultiModel?: boolean;
+  isReasoningModel?: boolean;
   headers: () => Record<string, string | undefined>;
   fetch?: FetchFunction;
   
@@ -44,7 +44,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
   private readonly config: ZhipuChatConfig;
 
   /**
-   * Constructs a new QwenChatLanguageModel.
+   * Constructs a new ZhipuChatLanguageModel.
    * @param modelId - The model identifier.
    * @param settings - Settings for the chat.
    * @param config - Model configuration.
