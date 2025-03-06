@@ -36,7 +36,7 @@ describe("doGenerate", () => {
     finish_reason = "stop",
     id = "chatcmpl-95ZTZkhr0mHNKqerQfiwkuox3PHAd",
     created = 1711115037,
-    model = "glm-4-flash-0125",
+    model = "glm-4-flash",
   }: {
     content?: string;
     tool_calls?: Array<{
@@ -127,7 +127,7 @@ describe("doGenerate", () => {
     });
 
     expect(request).toStrictEqual({
-      body: '{"model":"glm-4-flash","messages":[{"role":"user","content":[{"type":"text","text":"Hello"}]}]}',
+      body: '{"model":"glm-4-flash","messages":[{"role":"user","content":"Hello"}]}',
     });
   });
 
@@ -165,7 +165,7 @@ describe("doGenerate", () => {
 
     expect(usage).toStrictEqual({
       promptTokens: 20,
-      completionTokens: undefined,
+      completionTokens: NaN,
     });
   });
 
@@ -214,7 +214,7 @@ describe("doGenerate", () => {
 
     expect(rawResponse?.headers).toStrictEqual({
       // default headers:
-      "content-length": "319",
+      "content-length": "314",
       "content-type": "application/json",
 
       // custom header
@@ -233,7 +233,7 @@ describe("doGenerate", () => {
 
     expect(await server.getRequestBodyJson()).toStrictEqual({
       model: "glm-4-flash",
-      messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+      messages: [{ role: "user", content: "Hello" }],
     });
   });
 
@@ -252,7 +252,7 @@ describe("doGenerate", () => {
 
     expect(await server.getRequestBodyJson()).toStrictEqual({
       model: "glm-4-flash",
-      messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+      messages: [{ role: "user", content: "Hello" }],
       user_id: "test-user-id",
     });
   });
@@ -287,7 +287,7 @@ describe("doGenerate", () => {
 
     expect(await server.getRequestBodyJson()).toStrictEqual({
       model: "glm-4-flash",
-      messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+      messages: [{ role: "user", content: "Hello"}],
       tools: [
         {
           type: "function",
@@ -401,7 +401,7 @@ describe("doGenerate", () => {
       expect(await server.getRequestBodyJson()).toStrictEqual({
         model: "gpt-4o-2024-08-06",
         messages: [
-          { role: "user", content: [{ type: "text", text: "Hello" }] },
+          { role: "user", content: "Hello" },
         ],
       });
     });
@@ -421,7 +421,7 @@ describe("doGenerate", () => {
       expect(await server.getRequestBodyJson()).toStrictEqual({
         model: "gpt-4o-2024-08-06",
         messages: [
-          { role: "user", content: [{ type: "text", text: "Hello" }] },
+          { role: "user", content: "Hello" },
         ],
         response_format: { type: "json_object" },
       });
@@ -803,7 +803,7 @@ describe("doStream", () => {
     });
 
     expect(request).toStrictEqual({
-      body: '{"model":"glm-4-flash","messages":[{"role":"user","content":[{"type":"text","text":"Hello"}]}],"stream":true}',
+      body: '{"model":"glm-4-flash","messages":[{"role":"user","content":"Hello"}],"stream":true}',
     });
   });
 
@@ -843,7 +843,7 @@ describe("doStream", () => {
     expect(await server.getRequestBodyJson()).toStrictEqual({
       stream: true,
       model: "glm-4-flash",
-      messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+      messages: [{ role: "user", content: "Hello" }],
     });
   });
 

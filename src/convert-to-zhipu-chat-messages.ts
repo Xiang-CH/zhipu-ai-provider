@@ -21,6 +21,19 @@ export function convertToZhipuChatMessages(
       }
 
       case "user": {
+        if (content.length === 1 && content[0].type === 'text') {
+          messages.push({ role: 'user', content: content[0].text });
+          break;
+        }
+
+        if (content.every(part => part.type === 'text')) {
+          messages.push({
+            role: 'user',
+            content: content.map(part => part.text).join(''),
+          });
+          break;
+        }
+
         messages.push({
           role: "user",
           content: content.map((part) => {

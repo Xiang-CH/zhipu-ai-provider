@@ -26,8 +26,11 @@ import { prepareTools } from "./zhipu-prepare-tools";
 type ZhipuChatConfig = {
   provider: string;
   baseURL: string;
+  isMultiModel: boolean;
+  isReasoningModel: boolean;
   headers: () => Record<string, string | undefined>;
   fetch?: FetchFunction;
+  
 };
 
 export class ZhipuChatLanguageModel implements LanguageModelV1 {
@@ -54,6 +57,8 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
     this.modelId = modelId;
     this.settings = settings;
     this.config = config;
+    this.config.isMultiModel = this.modelId.includes("4v");
+    this.config.isReasoningModel = this.modelId.includes("zero");
   }
 
   /**
@@ -80,6 +85,13 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
 
     const warnings: LanguageModelV1CallWarning[] = [];
 
+    if (!this.config.isMultiModel && prompt.every(msg => msg.role === "user" && !msg.content.every(part => part.type === 'text'))) {
+      warnings.push({
+        type: "other",
+        message: "Non-vision models does not support message parts",
+      });
+    }
+
     if (topK != null) {
       warnings.push({
         type: "unsupported-setting",
@@ -101,7 +113,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
       });
     }
 
-    if (stopSequences != null && this.modelId.includes("4v")) {
+    if (stopSequences != null && this.config.isMultiModel) {
       warnings.push({
         type: "unsupported-setting",
         setting: "stopSequences",
@@ -127,7 +139,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
     if (
       responseFormat != null &&
       responseFormat.type === "json" &&
-      (this.modelId.includes("4v") || this.modelId.includes("zero"))
+      (this.config.isMultiModel || this.config.isReasoningModel)
     ) {
       warnings.push({
         type: "unsupported-setting",
