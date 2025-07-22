@@ -1,12 +1,12 @@
-import { LanguageModelV1Prompt } from "@ai-sdk/provider";
+import { describe } from "vitest";
+import { LanguageModelV2Prompt } from "@ai-sdk/provider";
 import {
-  JsonTestServer,
-  StreamingTestServer,
+  createTestServer,
   convertReadableStreamToArray,
 } from "@ai-sdk/provider-utils/test";
 import { createZhipu } from "./zhipu-provider";
 
-const TEST_PROMPT: LanguageModelV1Prompt = [
+const TEST_PROMPT: LanguageModelV2Prompt = [
   { role: "user", content: [{ type: "text", text: "Hello" }] },
 ];
 
@@ -17,13 +17,11 @@ const provider = createZhipu({
 
 const model = provider.chat("glm-4-flash");
 
+const server = createTestServer({
+  "https://open.bigmodel.cn/api/paas/v4/chat/completions": {},
+});
+
 describe("doGenerate", () => {
-  const server = new JsonTestServer(
-    "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-  );
-
-  server.setupTestEnvironment();
-
   function prepareJsonResponse({
     content = "",
     tool_calls,
@@ -37,6 +35,7 @@ describe("doGenerate", () => {
     id = "chatcmpl-95ZTZkhr0mHNKqerQfiwkuox3PHAd",
     created = 1711115037,
     model = "glm-4-flash",
+    headers,
   }: {
     content?: string;
     tool_calls?: Array<{
@@ -60,40 +59,53 @@ describe("doGenerate", () => {
     created?: number;
     id?: string;
     model?: string;
+    headers?: Record<string, string>;
   } = {}) {
-    server.responseBodyJson = {
-      id,
-      object: "chat.completion",
-      created,
-      model,
-      choices: [
-        {
-          index: 0,
-          message: {
-            role: "assistant",
-            content,
-            tool_calls,
-            function_call,
+    server.urls[
+      "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    ].response = {
+      type: "json-value",
+      headers,
+      body: {
+        headers,
+        id,
+        object: "chat.completion",
+        created,
+        model,
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: "assistant",
+              content,
+              tool_calls,
+              function_call,
+            },
+            finish_reason,
           },
-          finish_reason,
-        },
-      ],
-      usage,
-      system_fingerprint: "fp_3bc1b5746c",
+        ],
+        usage,
+        system_fingerprint: "fp_3bc1b5746c",
+      },
     };
   }
 
   it("should extract text response", async () => {
     prepareJsonResponse({ content: "Hello, World!" });
 
-    const { text } = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
+    const { content } = await model.doGenerate({
       prompt: TEST_PROMPT,
     });
 
-    expect(text).toStrictEqual("Hello, World!");
-  });
+    expect(content).toMatchInlineSnapshot(`
+      [
+        {
+          "text": "Hello, World!",
+          "type": "text",
+        },
+      ]
+    `);
+  }); // Closing brace for the 'it' block on line 90
 
   it("should extract usage", async () => {
     prepareJsonResponse({
@@ -106,14 +118,12 @@ describe("doGenerate", () => {
     });
 
     const { usage } = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
     expect(usage).toStrictEqual({
-      promptTokens: 20,
-      completionTokens: 5,
+      inputTokens: 20,
+      outputTokens: 5,
     });
   });
 
@@ -121,8 +131,6 @@ describe("doGenerate", () => {
     prepareJsonResponse({});
 
     const { request } = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
@@ -139,8 +147,6 @@ describe("doGenerate", () => {
     });
 
     const { response } = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
@@ -158,14 +164,12 @@ describe("doGenerate", () => {
     });
 
     const { usage } = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
     expect(usage).toStrictEqual({
-      promptTokens: 20,
-      completionTokens: NaN,
+      inputTokens: 20,
+      outputTokens: NaN,
     });
   });
 
@@ -176,8 +180,6 @@ describe("doGenerate", () => {
     });
 
     const response = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
@@ -191,8 +193,6 @@ describe("doGenerate", () => {
     });
 
     const response = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
@@ -200,19 +200,15 @@ describe("doGenerate", () => {
   });
 
   it("should expose the raw response headers", async () => {
-    prepareJsonResponse({ content: "" });
+    prepareJsonResponse({
+      headers: { "test-header": "test-value" },
+    });
 
-    server.responseHeaders = {
-      "test-header": "test-value",
-    };
-
-    const { rawResponse } = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
+    const { response } = await model.doGenerate({
       prompt: TEST_PROMPT,
     });
 
-    expect(rawResponse?.headers).toStrictEqual({
+    expect(response?.headers).toStrictEqual({
       // default headers:
       "content-length": "314",
       "content-type": "application/json",
@@ -226,12 +222,10 @@ describe("doGenerate", () => {
     prepareJsonResponse({ content: "" });
 
     await model.doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
-    expect(await server.getRequestBodyJson()).toStrictEqual({
+    expect(server.calls[0].requestBodyJson).toStrictEqual({
       model: "glm-4-flash",
       messages: [{ role: "user", content: "Hello" }],
     });
@@ -245,12 +239,10 @@ describe("doGenerate", () => {
         userId: "test-user-id",
       })
       .doGenerate({
-        inputFormat: "prompt",
-        mode: { type: "regular" },
         prompt: TEST_PROMPT,
       });
 
-    expect(await server.getRequestBodyJson()).toStrictEqual({
+    expect(server.calls[0].requestBodyJson).toStrictEqual({
       model: "glm-4-flash",
       messages: [{ role: "user", content: "Hello" }],
       user_id: "test-user-id",
@@ -261,33 +253,29 @@ describe("doGenerate", () => {
     prepareJsonResponse({ content: "" });
 
     await model.doGenerate({
-      inputFormat: "prompt",
-      mode: {
-        type: "regular",
-        tools: [
-          {
-            type: "function",
-            name: "test-tool",
-            parameters: {
-              type: "object",
-              properties: { value: { type: "string" } },
-              required: ["value"],
-              additionalProperties: false,
-              $schema: "http://json-schema.org/draft-07/schema#",
-            },
+      tools: [
+        {
+          type: "function",
+          name: "test-tool",
+          inputSchema: {
+            type: "object",
+            properties: { value: { type: "string" } },
+            required: ["value"],
+            additionalProperties: false,
+            $schema: "http://json-schema.org/draft-07/schema#",
           },
-        ],
-        toolChoice: {
-          type: "tool",
-          toolName: "test-tool",
         },
+      ],
+      toolChoice: {
+        type: "tool",
+        toolName: "test-tool",
       },
       prompt: TEST_PROMPT,
     });
 
-    expect(await server.getRequestBodyJson()).toStrictEqual({
+    expect(server.calls[0].requestBodyJson).toStrictEqual({
       model: "glm-4-flash",
-      messages: [{ role: "user", content: "Hello"}],
+      messages: [{ role: "user", content: "Hello" }],
       tools: [
         {
           type: "function",
@@ -318,17 +306,13 @@ describe("doGenerate", () => {
     });
 
     await provider.chat("glm-4-flash").doGenerate({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
       headers: {
         "Custom-Request-Header": "request-header-value",
       },
     });
 
-    const requestHeaders = await server.getRequestHeaders();
-
-    expect(requestHeaders).toStrictEqual({
+    expect(server.calls[0].requestHeaders).toStrictEqual({
       authorization: `Bearer ${TEST_API_KEY}`,
       "content-type": "application/json",
       "custom-provider-header": "provider-header-value",
@@ -351,78 +335,68 @@ describe("doGenerate", () => {
     });
 
     const result = await model.doGenerate({
-      inputFormat: "prompt",
-      mode: {
-        type: "regular",
-        tools: [
-          {
-            type: "function",
-            name: "test-tool",
-            parameters: {
-              type: "object",
-              properties: { value: { type: "string" } },
-              required: ["value"],
-              additionalProperties: false,
-              $schema: "http://json-schema.org/draft-07/schema#",
-            },
+      tools: [
+        {
+          type: "function",
+          name: "test-tool",
+          inputSchema: {
+            type: "object",
+            properties: { value: { type: "string" } },
+            required: ["value"],
+            additionalProperties: false,
+            $schema: "http://json-schema.org/draft-07/schema#",
           },
-        ],
-        toolChoice: {
-          type: "tool",
-          toolName: "test-tool",
         },
+      ],
+      toolChoice: {
+        type: "tool",
+        toolName: "test-tool",
       },
       prompt: TEST_PROMPT,
     });
 
-    expect(result.toolCalls).toStrictEqual([
-      {
-        args: '{"value":"Spark"}',
-        toolCallId: "call_O17Uplv4lJvD6DVdIvFFeRMw",
-        toolCallType: "function",
-        toolName: "test-tool",
-      },
-    ]);
+    expect(result.content).toMatchInlineSnapshot(`
+      [
+        {
+          "input": "{"value":"Spark"}",
+          "toolCallId": "call_O17Uplv4lJvD6DVdIvFFeRMw",
+          "toolName": "test-tool",
+          "type": "tool-call",
+        },
+      ]
+    `);
   });
 
   describe("response format", () => {
     it("should not send a response_format when response format is text", async () => {
       prepareJsonResponse({ content: '{"value":"Spark"}' });
 
-      const model = provider.chat("gpt-4o-2024-08-06");
+      const model = provider.chat("glm-4-flash");
 
       await model.doGenerate({
-        inputFormat: "prompt",
-        mode: { type: "regular" },
         prompt: TEST_PROMPT,
         responseFormat: { type: "text" },
       });
 
-      expect(await server.getRequestBodyJson()).toStrictEqual({
-        model: "gpt-4o-2024-08-06",
-        messages: [
-          { role: "user", content: "Hello" },
-        ],
+      expect(server.calls[0].requestBodyJson).toStrictEqual({
+        model: "glm-4-flash",
+        messages: [{ role: "user", content: "Hello" }],
       });
     });
 
     it('should forward json response format as "json_object" without schema', async () => {
       prepareJsonResponse({ content: '{"value":"Spark"}' });
 
-      const model = provider.chat("gpt-4o-2024-08-06");
+      const model = provider.chat("glm-4-flash");
 
       await model.doGenerate({
-        inputFormat: "prompt",
-        mode: { type: "regular" },
         prompt: TEST_PROMPT,
         responseFormat: { type: "json" },
       });
 
-      expect(await server.getRequestBodyJson()).toStrictEqual({
+      expect(server.calls[0].requestBodyJson).toStrictEqual({
         model: "gpt-4o-2024-08-06",
-        messages: [
-          { role: "user", content: "Hello" },
-        ],
+        messages: [{ role: "user", content: "Hello" }],
         response_format: { type: "json_object" },
       });
     });
@@ -430,85 +404,107 @@ describe("doGenerate", () => {
 });
 
 describe("doStream", () => {
-  const server = new StreamingTestServer(
-    "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-  );
-
-  server.setupTestEnvironment();
-
   function prepareStreamResponse({
     content,
-    usage = {
-      prompt_tokens: 17,
-      total_tokens: 244,
-      completion_tokens: 227,
-    },
     finish_reason = "stop",
-    model = "glm-4-flash-0613",
+    headers,
   }: {
     content: string[];
-    usage?: {
-      prompt_tokens: number;
-      total_tokens: number;
-      completion_tokens: number;
-    };
     finish_reason?: string;
-    model?: string;
+    headers?: Record<string, string>;
   }) {
-    server.responseChunks = [
-      `data: {"id":"chatcmpl-96aZqmeDpA9IPD6tACY8djkMsJCMP","object":"chat.completion.chunk","created":1702657020,"model":"${model}",` +
-        `"system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}\n\n`,
-      ...content.map((text) => {
-        return (
-          `data: {"id":"chatcmpl-96aZqmeDpA9IPD6tACY8djkMsJCMP","object":"chat.completion.chunk","created":1702657020,"model":"${model}",` +
-          `"system_fingerprint":null,"choices":[{"index":1,"delta":{"content":"${text}"},"finish_reason":null}]}\n\n`
-        );
-      }),
-      `data: {"id":"chatcmpl-96aZqmeDpA9IPD6tACY8djkMsJCMP","object":"chat.completion.chunk","created":1702657020,"model":"${model}",` +
-        `"system_fingerprint":null,"choices":[{"index":0,"delta":{},"finish_reason":"${finish_reason}"}]}\n\n`,
-      `data: {"id":"chatcmpl-96aZqmeDpA9IPD6tACY8djkMsJCMP","object":"chat.completion.chunk","created":1702657020,"model":"${model}",` +
-        `"system_fingerprint":"fp_3bc1b5746c","choices":[],"usage":${JSON.stringify(
-          usage,
-        )}}\n\n`,
-      "data: [DONE]\n\n",
-    ];
+    server.urls[
+      "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    ].response = {
+      type: "stream-chunks",
+      headers,
+      chunks: [
+        `data: {"id":"chatcmpl-e7f8e220-656c-4455-a132-dacfc1370798","object":"chat.completion.chunk","created":1702657020,"model":"grok-beta",` +
+          `"system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}\n\n`,
+        ...content.map((text) => {
+          return (
+            `data: {"id":"chatcmpl-e7f8e220-656c-4455-a132-dacfc1370798","object":"chat.completion.chunk","created":1702657020,"model":"grok-beta",` +
+            `"system_fingerprint":null,"choices":[{"index":1,"delta":{"content":"${text}"},"finish_reason":null}]}\n\n`
+          );
+        }),
+        `data: {"id":"chatcmpl-e7f8e220-656c-4455-a132-dacfc1370798","object":"chat.completion.chunk","created":1702657020,"model":"grok-beta",` +
+          `"system_fingerprint":null,"choices":[{"index":0,"delta":{},"finish_reason":"${finish_reason}"}]}\n\n`,
+        `data: {"id":"chatcmpl-e7f8e220-656c-4455-a132-dacfc1370798","object":"chat.completion.chunk","created":1729171479,"model":"grok-beta",` +
+          `"system_fingerprint":"fp_10c08bf97d","choices":[{"index":0,"delta":{},"finish_reason":"${finish_reason}"}],` +
+          `"usage":{"queue_time":0.061348671,"prompt_tokens":18,"prompt_time":0.000211569,` +
+          `"completion_tokens":439,"completion_time":0.798181818,"total_tokens":457,"total_time":0.798393387}}\n\n`,
+        "data: [DONE]\n\n",
+      ],
+    };
   }
 
   it("should stream text deltas", async () => {
     prepareStreamResponse({
       content: ["Hello", ", ", "World!"],
       finish_reason: "stop",
-      usage: {
-        prompt_tokens: 17,
-        total_tokens: 244,
-        completion_tokens: 227,
-      },
     });
 
     const { stream } = await model.doStream({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
     // note: space moved to last chunk bc of trimming
-    expect(await convertReadableStreamToArray(stream)).toStrictEqual([
-      {
-        type: "response-metadata",
-        id: "chatcmpl-96aZqmeDpA9IPD6tACY8djkMsJCMP",
-        modelId: "glm-4-flash-0613",
-        timestamp: new Date("2023-12-15T16:17:00.000Z"),
-      },
-      { type: "text-delta", textDelta: "" },
-      { type: "text-delta", textDelta: "Hello" },
-      { type: "text-delta", textDelta: ", " },
-      { type: "text-delta", textDelta: "World!" },
-      {
-        type: "finish",
-        finishReason: "stop",
-        usage: { promptTokens: 17, completionTokens: 227 },
-      },
-    ]);
+    expect(await convertReadableStreamToArray(stream)).toMatchInlineSnapshot(`
+      [
+        {
+          "type": "stream-start",
+          "warnings": [],
+        },
+        {
+          "id": "chatcmpl-e7f8e220-656c-4455-a132-dacfc1370798",
+          "modelId": "grok-beta",
+          "timestamp": 2023-12-15T16:17:00.000Z,
+          "type": "response-metadata",
+        },
+        {
+          "id": "txt-0",
+          "type": "text-start",
+        },
+        {
+          "delta": "",
+          "id": "txt-0",
+          "type": "text-delta",
+        },
+        {
+          "delta": "Hello",
+          "id": "txt-0",
+          "type": "text-delta",
+        },
+        {
+          "delta": ", ",
+          "id": "txt-0",
+          "type": "text-delta",
+        },
+        {
+          "delta": "World!",
+          "id": "txt-0",
+          "type": "text-delta",
+        },
+        {
+          "id": "txt-0",
+          "type": "text-end",
+        },
+        {
+          "finishReason": "stop",
+          "providerMetadata": {
+            "test-provider": {},
+          },
+          "type": "finish",
+          "usage": {
+            "cachedInputTokens": undefined,
+            "inputTokens": 18,
+            "outputTokens": 439,
+            "reasoningTokens": undefined,
+            "totalTokens": 457,
+          },
+        },
+      ]
+    `);
   });
 
   // it("should stream tool deltas", async () => {
@@ -771,11 +767,14 @@ describe("doStream", () => {
   // });
 
   it("should handle unparsable stream parts", async () => {
-    server.responseChunks = [`data: {unparsable}\n\n`, "data: [DONE]\n\n"];
+    server.urls[
+      "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    ].response = {
+      type: "stream-chunks",
+      chunks: [`data: {unparsable}\n\n`, "data: [DONE]\n\n"],
+    };
 
     const { stream } = await model.doStream({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
@@ -787,8 +786,8 @@ describe("doStream", () => {
       finishReason: "error",
       type: "finish",
       usage: {
-        completionTokens: NaN,
-        promptTokens: NaN,
+        outputTokens: NaN,
+        inputTokens: NaN,
       },
     });
   });
@@ -797,8 +796,6 @@ describe("doStream", () => {
     prepareStreamResponse({ content: [] });
 
     const { request } = await model.doStream({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
@@ -808,19 +805,18 @@ describe("doStream", () => {
   });
 
   it("should expose the raw response headers", async () => {
-    prepareStreamResponse({ content: [] });
+    prepareStreamResponse({
+      content: [],
+      headers: {
+        "test-header": "test-value",
+      },
+    });
 
-    server.responseHeaders = {
-      "test-header": "test-value",
-    };
-
-    const { rawResponse } = await model.doStream({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
+    const { response } = await model.doStream({
       prompt: TEST_PROMPT,
     });
 
-    expect(rawResponse?.headers).toStrictEqual({
+    expect(response?.headers).toStrictEqual({
       // default headers:
       "content-type": "text/event-stream",
       "cache-control": "no-cache",
@@ -835,12 +831,10 @@ describe("doStream", () => {
     prepareStreamResponse({ content: [] });
 
     await model.doStream({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
     });
 
-    expect(await server.getRequestBodyJson()).toStrictEqual({
+    expect(await server.calls[0].requestBodyJson).toStrictEqual({
       stream: true,
       model: "glm-4-flash",
       messages: [{ role: "user", content: "Hello" }],
@@ -858,17 +852,13 @@ describe("doStream", () => {
     });
 
     await provider.chat("glm-4-flash").doStream({
-      inputFormat: "prompt",
-      mode: { type: "regular" },
       prompt: TEST_PROMPT,
       headers: {
         "Custom-Request-Header": "request-header-value",
       },
     });
 
-    const requestHeaders = await server.getRequestHeaders();
-
-    expect(requestHeaders).toStrictEqual({
+    expect(await server.calls[0].requestHeaders).toStrictEqual({
       authorization: `Bearer ${TEST_API_KEY}`,
       "content-type": "application/json",
       "custom-provider-header": "provider-header-value",

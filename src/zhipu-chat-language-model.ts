@@ -1,9 +1,11 @@
 import {
   InvalidResponseDataError,
-  LanguageModelV1,
-  LanguageModelV1CallWarning,
-  LanguageModelV1FinishReason,
-  LanguageModelV1StreamPart,
+  LanguageModelV2,
+  LanguageModelV2CallWarning,
+  LanguageModelV2Content,
+  LanguageModelV2FinishReason,
+  LanguageModelV2StreamPart,
+  LanguageModelV2Usage,
 } from "@ai-sdk/provider";
 import {
   isParsableJson,
@@ -21,7 +23,6 @@ import { mapZhipuFinishReason } from "./map-zhipu-finish-reason";
 import { ZhipuChatModelId, ZhipuChatSettings } from "./zhipu-chat-settings";
 import { zhipuFailedResponseHandler } from "./zhipu-error";
 import { getResponseMetadata } from "./get-response-metadata";
-import { prepareTools } from "./zhipu-prepare-tools";
 
 type ZhipuChatConfig = {
   provider: string;
@@ -30,13 +31,18 @@ type ZhipuChatConfig = {
   isReasoningModel?: boolean;
   headers: () => Record<string, string | undefined>;
   fetch?: FetchFunction;
-  
 };
 
-export class ZhipuChatLanguageModel implements LanguageModelV1 {
-  readonly specificationVersion = "v1";
+export class ZhipuChatLanguageModel implements LanguageModelV2 {
+  readonly specificationVersion = "v2" as const;
   readonly defaultObjectGenerationMode = "json";
-  readonly supportsImageUrls = false;
+  readonly supportedUrls: Record<string, RegExp[]> = {
+    "image/*": [
+      /^data:image\/[a-zA-Z]+;base64,/,
+      /^https?:\/\/.+$/i,
+    ],
+    "video/*": [/^https?:\/\/.+\.(mp4|webm|ogg)$/i],
+  };
 
   readonly modelId: ZhipuChatModelId;
   readonly settings: ZhipuChatSettings;
@@ -54,11 +60,11 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
     settings: ZhipuChatSettings,
     config: ZhipuChatConfig,
   ) {
-    this.modelId = modelId;
+    this.modelId = modelId.toLocaleLowerCase();
     this.settings = settings;
     this.config = config;
-    this.config.isMultiModel = this.modelId.includes("4v");
-    this.config.isReasoningModel = this.modelId.includes("zero");
+    this.config.isMultiModel = this.modelId.includes("v");
+    this.config.isReasoningModel = this.modelId.includes("z") || this.modelId.includes("thinking");
   }
 
   /**
@@ -69,9 +75,8 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
   }
 
   private getArgs({
-    mode,
     prompt,
-    maxTokens,
+    maxOutputTokens,
     temperature,
     topP,
     topK,
@@ -80,12 +85,21 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
     stopSequences,
     responseFormat,
     seed,
-  }: Parameters<LanguageModelV1["doGenerate"]>[0]) {
-    const type = mode.type;
+    tools,
+    toolChoice,
+  }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
+    // const type = mode.type;
 
-    const warnings: LanguageModelV1CallWarning[] = [];
+    const warnings: LanguageModelV2CallWarning[] = [];
 
-    if (!this.config.isMultiModel && prompt.every(msg => msg.role === "user" && !msg.content.every(part => part.type === 'text'))) {
+    if (
+      !this.config.isMultiModel &&
+      prompt.every(
+        (msg) =>
+          msg.role === "user" &&
+          !msg.content.every((part) => part.type === "text"),
+      )
+    ) {
       warnings.push({
         type: "other",
         message: "Non-vision models does not support message parts",
@@ -149,6 +163,26 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
       });
     }
 
+    if (tools && tools.length > 0 && this.config.isMultiModel) {
+      warnings.push({
+        type: "unsupported-setting",
+        setting: "tools",
+        details: "Tools are not supported with vision models.",
+      });
+    }
+
+    if (
+      tools &&
+      tools.length > 0 &&
+      tools.some((tool) => tool.type !== "function")
+    ) {
+      warnings.push({
+        type: "unsupported-setting",
+        setting: "tools",
+        details: "Provider-defined tools are not implemented",
+      });
+    }
+
     if (
       responseFormat != null &&
       responseFormat.type === "json" &&
@@ -172,7 +206,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
       request_id: this.settings.requestId,
 
       // standardized settings:
-      max_tokens: maxTokens,
+      max_tokens: maxOutputTokens,
       temperature: temperature,
       top_p: topP,
 
@@ -182,52 +216,40 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
 
       // messages:
       messages: convertToZhipuChatMessages(prompt),
+
+      // tools:
+      tool_choice: toolChoice ?? "auto",
+      tools:
+        tools
+          ?.filter((tool) => tool.type === "function")
+          .map((tool) => ({
+            type: "function" as const,
+            function: {
+              name: tool.name,
+              description: tool.description ?? undefined,
+              parameters: tool.inputSchema,
+            },
+          })) ?? undefined,
+
+      // TODO: add provider-specific tool (web_search|retrieval)
     };
 
-    switch (type) {
-      case "regular": {
-        const { tools, tool_choice, toolWarnings } = prepareTools(mode);
-
-        return {
-          args: { ...baseArgs, tools, tool_choice },
-          warnings: [...warnings, ...toolWarnings],
-        };
-      }
-
-      case "object-json": {
-        return {
-          args: {
-            ...baseArgs,
-            response_format: { type: "json_object" },
-          },
-          warnings,
-        };
-      }
-
-      case "object-tool": {
-        return {
-          args: {
-            ...baseArgs,
-            tool_choice: "auto",
-            tools: [mode.tool],
-          },
-          warnings,
-        };
-      }
-
-      default: {
-        const _exhaustiveCheck: never = type;
-        throw new Error(`Unsupported type: ${_exhaustiveCheck}`);
-      }
-    }
+    return {
+      args: baseArgs,
+      warnings,
+    };
   }
 
   async doGenerate(
-    options: Parameters<LanguageModelV1["doGenerate"]>[0],
-  ): Promise<Awaited<ReturnType<LanguageModelV1["doGenerate"]>>> {
+    options: Parameters<LanguageModelV2["doGenerate"]>[0],
+  ): Promise<Awaited<ReturnType<LanguageModelV2["doGenerate"]>>> {
     const { args, warnings } = this.getArgs(options);
 
-    const { responseHeaders, value: response } = await postJsonToApi({
+    const {
+      value: response,
+      rawValue: rawResponse,
+      responseHeaders,
+    } = await postJsonToApi({
       url: `${this.config.baseURL}/chat/completions`,
       headers: combineHeaders(this.config.headers(), options.headers),
       body: args,
@@ -239,34 +261,75 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
       fetch: this.config.fetch,
     });
 
-    const { messages: rawPrompt, ...rawSettings } = args;
-    const choice = response.choices[0];
+    const responseData = response as z.infer<typeof zhipuChatResponseSchema>;
+    const choice = responseData.choices[0];
+
+    const content: LanguageModelV2Content[] = [];
+
+    // Extract text content
+    const responseText = responseData.choices[0].message.content
+    const responseReasoningText = responseData.choices[0].message.reasoning_content;
+    if (responseText) {
+      if (this.config.isReasoningModel && responseText.includes("<think>")) {
+        content.push({
+          type: "reasoning",
+          text: responseText.split("<think>")[1].split("</think>")[0],
+        }, {
+          type: "text",
+          text: responseText.split("</think>")[1],
+        });
+      } else if ( this.config.isReasoningModel && responseReasoningText) {
+        content.push({
+          type: "reasoning",
+          text: responseReasoningText,
+        });
+        content.push({
+          type: "text",
+          text: responseText,
+        });
+      } else {
+        content.push({
+          type: "text",
+          text: responseText,
+        });
+      }
+    }
+
+    // Extract tool calls
+    if (responseData.choices[0].message.tool_calls) {
+      for (const toolCall of responseData.choices[0].message.tool_calls) {
+        content.push({
+          type: "tool-call",
+          toolCallId: toolCall.id,
+          toolName: toolCall.function.name,
+          input: toolCall.function.arguments,
+          providerExecuted: toolCall.type === "function" ? false : true,
+        });
+      }
+    }
 
     return {
-      text: choice.message.content ?? undefined,
-      toolCalls: choice.message.tool_calls?.map((toolCall) => ({
-        toolCallType: "function",
-        toolCallId: toolCall.id,
-        toolName: toolCall.function.name,
-        args: toolCall.function.arguments!,
-      })),
+      content,
       finishReason: mapZhipuFinishReason(choice.finish_reason),
       usage: {
-        promptTokens: response.usage.prompt_tokens,
-        completionTokens: response.usage.completion_tokens ?? NaN,
+        totalTokens: responseData.usage?.total_tokens ?? NaN,
+        inputTokens: responseData.usage.prompt_tokens,
+        outputTokens: responseData.usage.completion_tokens ?? NaN,
       },
-      rawCall: { rawPrompt, rawSettings },
-      rawResponse: { headers: responseHeaders },
-      request: { body: JSON.stringify(args) },
-      response: getResponseMetadata(response),
+      request: { body: args },
+      response: {
+        ...getResponseMetadata(responseData),
+        headers: responseHeaders,
+        body: rawResponse,
+      },
       warnings,
     };
   }
 
   async doStream(
-    options: Parameters<LanguageModelV1["doStream"]>[0],
-  ): Promise<Awaited<ReturnType<LanguageModelV1["doStream"]>>> {
-    const { args, warnings } = this.getArgs(options);
+    options: Parameters<LanguageModelV2["doStream"]>[0],
+  ): Promise<Awaited<ReturnType<LanguageModelV2["doStream"]>>> {
+    const { args } = this.getArgs(options);
 
     const body = { ...args, stream: true };
     // const metadataExtractor = this.config.metadataExtractor?.createStreamExtractor();
@@ -282,7 +345,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
       fetch: this.config.fetch,
     });
 
-    const { messages: rawPrompt, ...rawSettings } = args;
+    // const { messages: rawPrompt } = args;
 
     const toolCalls: Array<{
       id: string;
@@ -294,23 +357,28 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
       hasFinished: boolean;
     }> = [];
 
-    let finishReason: LanguageModelV1FinishReason = "unknown";
-    let usage: {
-      promptTokens: number | undefined;
-      completionTokens: number | undefined;
-    } = {
-      promptTokens: undefined,
-      completionTokens: undefined,
+    let finishReason: LanguageModelV2FinishReason = "unknown";
+    const usage: LanguageModelV2Usage = {
+      inputTokens: undefined,
+      outputTokens: undefined,
+      totalTokens: undefined,
     };
     let isFirstChunk = true;
+    let isActiveReasoning = false;
+    let isActiveText = false;
 
     return {
       stream: response.pipeThrough(
         new TransformStream<
           ParseResult<z.infer<typeof zhipuChatChunkSchema>>,
-          LanguageModelV1StreamPart
+          LanguageModelV2StreamPart
         >({
           transform(chunk, controller) {
+            // Emit raw chunk if requested (before anything else)
+            if (options.includeRawChunks) {
+              controller.enqueue({ type: 'raw', rawValue: chunk.rawValue });
+            }
+
             // handle failed chunk parsing / validation:
             if (chunk.success == false) {
               finishReason = "error";
@@ -321,11 +389,11 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
             const value = chunk.value;
 
             // handle error chunks:
-            // if ('error' in value) {
-            //   finishReason = 'error';
-            //   controller.enqueue({ type: 'error', error: value.error });
-            //   return;
-            // }
+            if ('error' in value) {
+              finishReason = 'error';
+              controller.enqueue({ type: 'error', error: value.error });
+              return;
+            }
 
             if (isFirstChunk) {
               isFirstChunk = false;
@@ -334,15 +402,17 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
                 type: "response-metadata",
                 ...getResponseMetadata(value),
               });
+
+              controller.enqueue({
+                type: "text-start",
+                id: "0",
+              });
             }
 
             if (value.usage != null) {
-              const { prompt_tokens, completion_tokens } = value.usage;
-
-              usage = {
-                promptTokens: prompt_tokens ?? undefined,
-                completionTokens: completion_tokens ?? undefined,
-              };
+              usage.inputTokens = value.usage.prompt_tokens ?? undefined;
+              usage.outputTokens = value.usage.completion_tokens ?? undefined;
+              usage.totalTokens = value.usage.total_tokens ?? undefined;
             }
 
             const choice = value.choices[0];
@@ -365,28 +435,42 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
 
             const delta = choice.delta;
 
-            if (delta.content != null) {
+            if (delta.reasoning_content != null) {
+              if (!isActiveReasoning) {
+                controller.enqueue({
+                  type: 'reasoning-start',
+                  id: 'reasoning-0',
+                });
+                isActiveReasoning = true;
+              }
+              
               controller.enqueue({
-                type: "text-delta",
-                textDelta: delta.content,
+                id: "reasoning-0",
+                type: "reasoning-delta",
+                delta: delta.reasoning_content,
               });
             }
 
-            const mappedToolCalls = delta.tool_calls;
+            if (delta.content != null) {
+              if (!isActiveText) {
+                controller.enqueue({ type: 'text-start', id: 'txt-0' });
+                isActiveText = true;
+              }
 
-            if (mappedToolCalls != null) {
-              for (const toolCallDelta of mappedToolCalls) {
+              controller.enqueue({
+                id: "txt-0",
+                type: "text-delta",
+                delta: delta.content,
+              });
+            }
+
+            
+
+            if (delta.tool_calls != null) {
+              for (const toolCallDelta of delta.tool_calls) {
                 const index = toolCallDelta.index;
 
-                // Tool call start. OpenAI returns all information except the arguments in the first chunk.
                 if (toolCalls[index] == null) {
-                  if (toolCallDelta.type !== "function") {
-                    throw new InvalidResponseDataError({
-                      data: toolCallDelta,
-                      message: `Expected 'function' type.`,
-                    });
-                  }
-
                   if (toolCallDelta.id == null) {
                     throw new InvalidResponseDataError({
                       data: toolCallDelta,
@@ -401,12 +485,18 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
                     });
                   }
 
+                  controller.enqueue({
+                    type: 'tool-input-start',
+                    id: toolCallDelta.id,
+                    toolName: toolCallDelta.function.name,
+                  });
+
                   toolCalls[index] = {
                     id: toolCallDelta.id,
-                    type: "function",
+                    type: 'function',
                     function: {
                       name: toolCallDelta.function.name,
-                      arguments: toolCallDelta.function.arguments ?? "",
+                      arguments: toolCallDelta.function.arguments ?? '',
                     },
                     hasFinished: false,
                   };
@@ -420,11 +510,9 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
                     // send delta if the argument text has already started:
                     if (toolCall.function.arguments.length > 0) {
                       controller.enqueue({
-                        type: "tool-call-delta",
-                        toolCallType: "function",
-                        toolCallId: toolCall.id,
+                        type: 'tool-input-start',
+                        id: toolCall.id,
                         toolName: toolCall.function.name,
-                        argsTextDelta: toolCall.function.arguments,
                       });
                     }
 
@@ -432,11 +520,15 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
                     // (some providers send the full tool call in one chunk):
                     if (isParsableJson(toolCall.function.arguments)) {
                       controller.enqueue({
-                        type: "tool-call",
-                        toolCallType: "function",
+                        type: 'tool-input-end',
+                        id: toolCall.id,
+                      });
+
+                      controller.enqueue({
+                        type: 'tool-call',
                         toolCallId: toolCall.id ?? generateId(),
                         toolName: toolCall.function.name,
-                        args: toolCall.function.arguments,
+                        input: toolCall.function.arguments,
                       });
                       toolCall.hasFinished = true;
                     }
@@ -454,16 +546,14 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
 
                 if (toolCallDelta.function?.arguments != null) {
                   toolCall.function!.arguments +=
-                    toolCallDelta.function?.arguments ?? "";
+                    toolCallDelta.function?.arguments ?? '';
                 }
 
                 // send delta
                 controller.enqueue({
-                  type: "tool-call-delta",
-                  toolCallType: "function",
-                  toolCallId: toolCall.id,
-                  toolName: toolCall.function.name,
-                  argsTextDelta: toolCallDelta.function.arguments ?? "",
+                  type: 'tool-input-delta',
+                  id: toolCall.id,
+                  delta: toolCallDelta.function.arguments ?? '',
                 });
 
                 // check if tool call is complete
@@ -473,11 +563,15 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
                   isParsableJson(toolCall.function.arguments)
                 ) {
                   controller.enqueue({
-                    type: "tool-call",
-                    toolCallType: "function",
+                    type: 'tool-input-end',
+                    id: toolCall.id,
+                  });
+
+                  controller.enqueue({
+                    type: 'tool-call',
                     toolCallId: toolCall.id ?? generateId(),
                     toolName: toolCall.function.name,
-                    args: toolCall.function.arguments,
+                    input: toolCall.function.arguments,
                   });
                   toolCall.hasFinished = true;
                 }
@@ -489,18 +583,13 @@ export class ZhipuChatLanguageModel implements LanguageModelV1 {
             controller.enqueue({
               type: "finish",
               finishReason,
-              usage: {
-                promptTokens: usage.promptTokens ?? NaN,
-                completionTokens: usage.completionTokens ?? NaN,
-              },
+              usage,
             });
           },
         }),
       ),
-      rawCall: { rawPrompt, rawSettings },
-      rawResponse: { headers: responseHeaders },
-      request: { body: JSON.stringify(body) },
-      warnings,
+      request: { body },
+      response: { headers: responseHeaders },
     };
   }
 }
@@ -516,6 +605,7 @@ const zhipuChatResponseSchema = z.object({
       message: z.object({
         role: z.literal("assistant"),
         content: z.string().nullish(),
+        reasoning_content: z.string().nullish(),
         tool_calls: z
           .array(
             z.object({
@@ -558,6 +648,7 @@ const zhipuChatChunkSchema = z.object({
       delta: z.object({
         role: z.enum(["assistant"]).optional(),
         content: z.string().nullish(),
+        reasoning_content: z.string().nullish(),
         tool_calls: z
           .array(
             z.object({
@@ -590,4 +681,3 @@ const zhipuChatChunkSchema = z.object({
     })
     .nullish(),
 });
-// zhipuErrorDataSchema

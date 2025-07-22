@@ -1,0 +1,2 @@
+overrides:
+  zhipu-ai-provider: link:../../Library/pnpm/global/5/node_modules/zhipu-ai-provider

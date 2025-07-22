@@ -2,11 +2,12 @@
 export type ZhipuChatModelId =
   // Language models
   | "glm-4-plus"
-  | "glm-4-air-0111"
+  | "glm-4-air-250414"
   | "glm-4-air"
   | "glm-4-airx"
   | "glm-4-long"
   | "glm-4-flash"
+  | "glm-4-flash-250414"
   | "glm-4-flashx"
   // Vision/Video Models
   | "glm-4v-plus-0111"
@@ -14,7 +15,12 @@ export type ZhipuChatModelId =
   | "glm-4v"
   | "glm-4v-flash"
   // Reasoning Models
-  | "glm-zero-preview"
+  | "glm-z1-air"
+  | "glm-z1-airx"
+  | "glm-z1-flash"
+  // Vision Reasoning Models
+  | "glm-4.1v-thinking-flash"
+  | "glm-4.1v-thinking-flashx"
   | (string & {});
 
 export interface ZhipuChatSettings {

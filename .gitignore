@@ -20,3 +20,6 @@ yarn-error.log*
 # OS generated files
 .DS_Store
 src/__snapshots__
+
+
+test.ts
