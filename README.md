@@ -1,5 +1,5 @@
 # Zhipu AI Provider - Vercel AI SDK Community Provider
-This is a [Zhipu](https://www.zhipuai.cn/) prodiver for the [Vercel AI](https://sdk.vercel.ai/) SDK. It enables seamless integration with **GLM** and Embedding Models provided on [bigmodel.cn](https://bigmodel.cn/).
+This is a [Zhipu](https://www.zhipuai.cn/) prodiver for the [AI SDK](https://sdk.vercel.ai/). It enables seamless integration with **GLM** and Embedding Models provided on [bigmodel.cn](https://bigmodel.cn/).
 
 
 ## Setup
@@ -105,3 +105,4 @@ console.log(providerMetadata.zhipu.images[0].url)
 ## Documentation
 - **[Zhipu documentation](https://bigmodel.cn/dev/welcome)** 
 - **[Vercel AI SDK documentation](https://sdk.vercel.ai/docs/introduction)**
+- **[Zhipu AI Provider Repo](https://github.com/Xiang-CH/zhipu-ai-provider)**

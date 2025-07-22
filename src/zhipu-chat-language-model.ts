@@ -37,10 +37,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
   readonly specificationVersion = "v2" as const;
   readonly defaultObjectGenerationMode = "json";
   readonly supportedUrls: Record<string, RegExp[]> = {
-    "image/*": [
-      /^data:image\/[a-zA-Z]+;base64,/,
-      /^https?:\/\/.+$/i,
-    ],
+    "image/*": [/^data:image\/[a-zA-Z]+;base64,/, /^https?:\/\/.+$/i],
     "video/*": [/^https?:\/\/.+\.(mp4|webm|ogg)$/i],
   };
 
@@ -64,7 +61,8 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     this.settings = settings;
     this.config = config;
     this.config.isMultiModel = this.modelId.includes("v");
-    this.config.isReasoningModel = this.modelId.includes("z") || this.modelId.includes("thinking");
+    this.config.isReasoningModel =
+      this.modelId.includes("z") || this.modelId.includes("thinking");
   }
 
   /**
@@ -267,18 +265,22 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     const content: LanguageModelV2Content[] = [];
 
     // Extract text content
-    const responseText = responseData.choices[0].message.content
-    const responseReasoningText = responseData.choices[0].message.reasoning_content;
+    const responseText = responseData.choices[0].message.content;
+    const responseReasoningText =
+      responseData.choices[0].message.reasoning_content;
     if (responseText) {
       if (this.config.isReasoningModel && responseText.includes("<think>")) {
-        content.push({
-          type: "reasoning",
-          text: responseText.split("<think>")[1].split("</think>")[0],
-        }, {
-          type: "text",
-          text: responseText.split("</think>")[1],
-        });
-      } else if ( this.config.isReasoningModel && responseReasoningText) {
+        content.push(
+          {
+            type: "reasoning",
+            text: responseText.split("<think>")[1].split("</think>")[0],
+          },
+          {
+            type: "text",
+            text: responseText.split("</think>")[1],
+          },
+        );
+      } else if (this.config.isReasoningModel && responseReasoningText) {
         content.push({
           type: "reasoning",
           text: responseReasoningText,
@@ -376,7 +378,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
           transform(chunk, controller) {
             // Emit raw chunk if requested (before anything else)
             if (options.includeRawChunks) {
-              controller.enqueue({ type: 'raw', rawValue: chunk.rawValue });
+              controller.enqueue({ type: "raw", rawValue: chunk.rawValue });
             }
 
             // handle failed chunk parsing / validation:
@@ -389,9 +391,9 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
             const value = chunk.value;
 
             // handle error chunks:
-            if ('error' in value) {
-              finishReason = 'error';
-              controller.enqueue({ type: 'error', error: value.error });
+            if ("error" in value) {
+              finishReason = "error";
+              controller.enqueue({ type: "error", error: value.error });
               return;
             }
 
@@ -438,12 +440,12 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
             if (delta.reasoning_content != null) {
               if (!isActiveReasoning) {
                 controller.enqueue({
-                  type: 'reasoning-start',
-                  id: 'reasoning-0',
+                  type: "reasoning-start",
+                  id: "reasoning-0",
                 });
                 isActiveReasoning = true;
               }
-              
+
               controller.enqueue({
                 id: "reasoning-0",
                 type: "reasoning-delta",
@@ -453,7 +455,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
 
             if (delta.content != null) {
               if (!isActiveText) {
-                controller.enqueue({ type: 'text-start', id: 'txt-0' });
+                controller.enqueue({ type: "text-start", id: "txt-0" });
                 isActiveText = true;
               }
 
@@ -463,8 +465,6 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
                 delta: delta.content,
               });
             }
-
-            
 
             if (delta.tool_calls != null) {
               for (const toolCallDelta of delta.tool_calls) {
@@ -486,17 +486,17 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
                   }
 
                   controller.enqueue({
-                    type: 'tool-input-start',
+                    type: "tool-input-start",
                     id: toolCallDelta.id,
                     toolName: toolCallDelta.function.name,
                   });
 
                   toolCalls[index] = {
                     id: toolCallDelta.id,
-                    type: 'function',
+                    type: "function",
                     function: {
                       name: toolCallDelta.function.name,
-                      arguments: toolCallDelta.function.arguments ?? '',
+                      arguments: toolCallDelta.function.arguments ?? "",
                     },
                     hasFinished: false,
                   };
@@ -510,7 +510,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
                     // send delta if the argument text has already started:
                     if (toolCall.function.arguments.length > 0) {
                       controller.enqueue({
-                        type: 'tool-input-start',
+                        type: "tool-input-start",
                         id: toolCall.id,
                         toolName: toolCall.function.name,
                       });
@@ -520,12 +520,12 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
                     // (some providers send the full tool call in one chunk):
                     if (isParsableJson(toolCall.function.arguments)) {
                       controller.enqueue({
-                        type: 'tool-input-end',
+                        type: "tool-input-end",
                         id: toolCall.id,
                       });
 
                       controller.enqueue({
-                        type: 'tool-call',
+                        type: "tool-call",
                         toolCallId: toolCall.id ?? generateId(),
                         toolName: toolCall.function.name,
                         input: toolCall.function.arguments,
@@ -546,14 +546,14 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
 
                 if (toolCallDelta.function?.arguments != null) {
                   toolCall.function!.arguments +=
-                    toolCallDelta.function?.arguments ?? '';
+                    toolCallDelta.function?.arguments ?? "";
                 }
 
                 // send delta
                 controller.enqueue({
-                  type: 'tool-input-delta',
+                  type: "tool-input-delta",
                   id: toolCall.id,
-                  delta: toolCallDelta.function.arguments ?? '',
+                  delta: toolCallDelta.function.arguments ?? "",
                 });
 
                 // check if tool call is complete
@@ -563,12 +563,12 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
                   isParsableJson(toolCall.function.arguments)
                 ) {
                   controller.enqueue({
-                    type: 'tool-input-end',
+                    type: "tool-input-end",
                     id: toolCall.id,
                   });
 
                   controller.enqueue({
-                    type: 'tool-call',
+                    type: "tool-call",
                     toolCallId: toolCall.id ?? generateId(),
                     toolName: toolCall.function.name,
                     input: toolCall.function.arguments,

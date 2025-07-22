@@ -8,9 +8,11 @@ import {
 } from "@ai-sdk/provider-utils";
 import { z } from "zod";
 import { defaultZhipuErrorStructure } from "./zhipu-error";
-import { ZhipuImageModelId, ZhipuImageProviderOptions, sizeSchema } from "./zhipu-image-options";
-import { zhipu } from "./zhipu-provider";
-import { _nullable } from "zod/v4/core";
+import {
+  ZhipuImageModelId,
+  ZhipuImageProviderOptions,
+  sizeSchema,
+} from "./zhipu-image-options";
 
 export type ZhipuImageModelConfig = {
   provider: string;
@@ -49,7 +51,9 @@ export class ZhipuImageModel implements ImageModelV2 {
   > {
     const warnings: Array<ImageModelV2CallWarning> = [];
 
-    const zhipuProviderOptions = providerOptions ? providerOptions.zhipu as ZhipuImageProviderOptions ?? {} : {};
+    const zhipuProviderOptions = providerOptions
+      ? (providerOptions.zhipu as ZhipuImageProviderOptions) ?? {}
+      : {};
 
     if (n != null) {
       warnings.push({
@@ -72,8 +76,16 @@ export class ZhipuImageModel implements ImageModelV2 {
       warnings.push({ type: "unsupported-setting", setting: "seed" });
     }
 
-    if (size != null && !sizeSchema.safeParse({ width: parseInt(size.split("x")[0]), height: parseInt(size.split("x")[1]) }).success) {
-      throw new Error("Invalid size. Size must be an object with width and height, both divisible by 16, and within the range of 512 to 2048 pixels.");
+    if (
+      size != null &&
+      !sizeSchema.safeParse({
+        width: parseInt(size.split("x")[0]),
+        height: parseInt(size.split("x")[1]),
+      }).success
+    ) {
+      throw new Error(
+        "Invalid size. Size must be an object with width and height, both divisible by 16, and within the range of 512 to 2048 pixels.",
+      );
     }
 
     const currentDate = this.config._internal?.currentDate?.() ?? new Date();
@@ -111,7 +123,7 @@ export class ZhipuImageModel implements ImageModelV2 {
               url: item.url,
             };
           }),
-        }
+        },
       },
       response: {
         timestamp: currentDate,

@@ -112,9 +112,7 @@ export function createZhipu(
       fetch: options.fetch,
     });
 
-  const createImageModel = (
-    modelId: ZhipuImageModelId,
-  ) =>
+  const createImageModel = (modelId: ZhipuImageModelId) =>
     new ZhipuImageModel(modelId, {
       provider: "zhipu.image",
       url: ({ path }) => `${baseURL}${path}`,
