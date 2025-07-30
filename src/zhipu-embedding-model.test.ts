@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EmbeddingModelV1Embedding } from "@ai-sdk/provider";
-import { JsonTestServer } from "@ai-sdk/provider-utils/test";
+import { EmbeddingModelV2Embedding } from "@ai-sdk/provider";
+import { createTestServer } from "@ai-sdk/provider-utils/test";
 import { createZhipu } from "./zhipu-provider";
 
 const dummyEmbeddings = [
@@ -13,29 +13,33 @@ const provider = createZhipu({ apiKey: "test-api-key" });
 const model = provider.textEmbeddingModel("embedding-3");
 
 describe("doEmbed", () => {
-  const server = new JsonTestServer(
-    "https://open.bigmodel.cn/api/paas/v4/embeddings",
-  );
-
-  server.setupTestEnvironment();
+  const server = createTestServer({
+    "https://open.bigmodel.cn/api/paas/v4/embeddings": {},
+  });
 
   function prepareJsonResponse({
     embeddings = dummyEmbeddings,
     usage = { prompt_tokens: 8, total_tokens: 8 },
+    headers,
   }: {
-    embeddings?: EmbeddingModelV1Embedding[];
+    embeddings?: EmbeddingModelV2Embedding[];
     usage?: { prompt_tokens: number; total_tokens: number };
+    headers?: Record<string, string>;
   } = {}) {
-    server.responseBodyJson = {
-      id: "b322cfc2b9d34e2f8e14fc99874faee5",
-      object: "list",
-      data: embeddings.map((embedding, i) => ({
-        object: "embedding",
-        embedding,
-        index: i,
-      })),
-      model: "embedding-3",
-      usage,
+    server.urls["https://open.bigmodel.cn/api/paas/v4/embeddings"].response = {
+      type: "json-value",
+      headers,
+      body: {
+        id: "b322cfc2b9d34e2f8e14fc99874faee5",
+        object: "list",
+        data: embeddings.map((embedding, i) => ({
+          object: "embedding",
+          embedding,
+          index: i,
+        })),
+        model: "embedding-3",
+        usage,
+      },
     };
   }
 
@@ -58,15 +62,15 @@ describe("doEmbed", () => {
   });
 
   it("should expose the raw response headers", async () => {
-    prepareJsonResponse();
+    prepareJsonResponse({
+      headers: {
+        "test-header": "test-value",
+      },
+    });
 
-    server.responseHeaders = {
-      "test-header": "test-value",
-    };
+    const { response } = await model.doEmbed({ values: testValues });
 
-    const { rawResponse } = await model.doEmbed({ values: testValues });
-
-    expect(rawResponse?.headers).toStrictEqual({
+    expect(response?.headers).toStrictEqual({
       // default headers:
       "content-length": "265",
       "content-type": "application/json",
@@ -81,7 +85,7 @@ describe("doEmbed", () => {
 
     await model.doEmbed({ values: testValues });
 
-    expect(await server.getRequestBodyJson()).toStrictEqual({
+    expect(await server.calls[0].requestBodyJson).toStrictEqual({
       model: "embedding-3",
       input: testValues,
     });
@@ -97,16 +101,14 @@ describe("doEmbed", () => {
       },
     });
 
-    await provider.embedding("embedding-3").doEmbed({
+    await provider.textEmbeddingModel("embedding-3").doEmbed({
       values: testValues,
       headers: {
         "Custom-Request-Header": "request-header-value",
       },
     });
 
-    const requestHeaders = await server.getRequestHeaders();
-
-    expect(requestHeaders).toStrictEqual({
+    expect(server.calls[0].requestHeaders).toStrictEqual({
       authorization: "Bearer test-api-key",
       "content-type": "application/json",
       "custom-provider-header": "provider-header-value",

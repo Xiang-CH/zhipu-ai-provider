@@ -1,4 +1,4 @@
-import type { JSONValue } from "@ai-sdk/provider";
+import type { JSONValue } from "ai";
 
 export type ZhipuPrompt = Array<ZhipuMessage>;
 

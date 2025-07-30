@@ -1,7 +1,7 @@
 import {
-  EmbeddingModelV1,
-  LanguageModelV1,
-  ProviderV1,
+  EmbeddingModelV2,
+  LanguageModelV2,
+  ProviderV2,
 } from "@ai-sdk/provider";
 import {
   FetchFunction,
@@ -11,13 +11,15 @@ import {
 import { ZhipuChatLanguageModel } from "./zhipu-chat-language-model";
 import { ZhipuChatModelId, ZhipuChatSettings } from "./zhipu-chat-settings";
 import { ZhipuEmbeddingModel } from "./zhipu-embedding-model";
+import { ZhipuImageModelId } from "./zhipu-image-options";
+import { ZhipuImageModel } from "./zhipu-image-model";
 import {
   ZhipuEmbeddingModelId,
   ZhipuEmbeddingSettings,
 } from "./zhipu-embedding-settings";
 
-export interface ZhipuProvider extends ProviderV1 {
-  (modelId: ZhipuChatModelId, settings?: ZhipuChatSettings): LanguageModelV1;
+export interface ZhipuProvider extends ProviderV2 {
+  (modelId: ZhipuChatModelId, settings?: ZhipuChatSettings): LanguageModelV2;
 
   /**
 Creates a model for text generation.
@@ -25,7 +27,7 @@ Creates a model for text generation.
   languageModel(
     modelId: ZhipuChatModelId,
     settings?: ZhipuChatSettings,
-  ): LanguageModelV1;
+  ): LanguageModelV2;
 
   /**
 Creates a model for text generation.
@@ -33,28 +35,15 @@ Creates a model for text generation.
   chat(
     modelId: ZhipuChatModelId,
     settings?: ZhipuChatSettings,
-  ): LanguageModelV1;
+  ): LanguageModelV2;
 
   /**
-@deprecated Use `textEmbeddingModel()` instead.
-   */
-  embedding(
-    modelId: ZhipuEmbeddingModelId,
-    settings?: ZhipuEmbeddingSettings,
-  ): EmbeddingModelV1<string>;
-
-  /**
-@deprecated Use `textEmbeddingModel()` instead.
-   */
-  textEmbedding(
-    modelId: ZhipuEmbeddingModelId,
-    settings?: ZhipuEmbeddingSettings,
-  ): EmbeddingModelV1<string>;
-
+Creates a model for text embedding.
+*/
   textEmbeddingModel: (
     modelId: ZhipuEmbeddingModelId,
     settings?: ZhipuEmbeddingSettings,
-  ) => EmbeddingModelV1<string>;
+  ) => EmbeddingModelV2<string>;
 }
 
 export interface ZhipuProviderSettings {
@@ -123,6 +112,17 @@ export function createZhipu(
       fetch: options.fetch,
     });
 
+  const createImageModel = (modelId: ZhipuImageModelId) =>
+    new ZhipuImageModel(modelId, {
+      provider: "zhipu.image",
+      url: ({ path }) => `${baseURL}${path}`,
+      headers: getHeaders,
+      fetch: options.fetch,
+      _internal: {
+        currentDate: () => new Date(),
+      },
+    });
+
   const provider = function (
     modelId: ZhipuChatModelId,
     settings?: ZhipuChatSettings,
@@ -138,9 +138,11 @@ export function createZhipu(
 
   provider.languageModel = createChatModel;
   provider.chat = createChatModel;
-  provider.embedding = createEmbeddingModel;
-  provider.textEmbedding = createEmbeddingModel;
+
   provider.textEmbeddingModel = createEmbeddingModel;
+
+  provider.image = createImageModel;
+  provider.imageModel = createImageModel;
 
   return provider;
 }

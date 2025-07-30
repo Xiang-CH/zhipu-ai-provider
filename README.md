@@ -1,5 +1,5 @@
 # Zhipu AI Provider - Vercel AI SDK Community Provider
-This is a [Zhipu](https://www.zhipuai.cn/) prodiver for the [Vercel AI](https://sdk.vercel.ai/) SDK. It enables seamless integration with **GLM** and Embedding Models provided on [bigmodel.cn](https://bigmodel.cn/).
+This is a [Zhipu](https://www.zhipuai.cn/) prodiver for the [AI SDK](https://sdk.vercel.ai/). It enables seamless integration with **GLM** and Embedding Models provided on [bigmodel.cn](https://bigmodel.cn/).
 
 
 ## Setup
@@ -41,9 +41,10 @@ You can use the following optional settings to customize the Zhipu provider inst
 - **headers**: *Record<string,string>*
   - Custom headers to include in the requests.
 
-## Example
+## Language Model Example
 
 ```ts
+import { generateText } from 'ai';
 import { zhipu } from 'zhipu-ai-provider';
 
 const { text } = await generateText({
@@ -54,6 +55,54 @@ const { text } = await generateText({
 console.log(result)
 ```
 
+## Embedding Example
+```ts
+const { embedding } = await embed({
+  model: zhipu.textEmbeddingModel("embedding-3", {
+    dimensions: 256, // Optional, defaults to 2048
+  }),
+  value: "Hello, world!",
+});
+
+console.log(embedding);
+```
+
+## Image Generation Example
+Zhipu supports image generation with the `cogview` models, but the api does not return images in base64 or buffer format, so the image urls are returned in the `providerMetadata` field.
+
+```ts
+import { experimental_generateImage as generateImage } from 'ai';
+import { zhipu } from 'zhipu-ai-provider';
+
+const { image, providerMetadata } = await generateImage({
+  model: zhipu.ImageModel('cogview-4-250304'),
+  prompt: 'A beautiful landscape with mountains and a river',
+  size: '1024x1024',  // optional
+  providerOptions: {  // optional
+      zhipu: {
+          quality: 'hd'
+      }
+  }
+});
+
+console.log(providerMetadata.zhipu.images[0].url)
+```
+
+## Features Support
+- [x] Text generation
+- [x] Text embedding
+- [x] Image generation
+- [x] Chat
+- [x] Tools
+- [x] Streaming
+- [x] Structured output
+- [x] Reasoning
+- [x] Vision
+- [x] Vision Reasoning
+- [ ] Provider-defined tools
+- [ ] Voice Models
+
 ## Documentation
 - **[Zhipu documentation](https://bigmodel.cn/dev/welcome)** 
 - **[Vercel AI SDK documentation](https://sdk.vercel.ai/docs/introduction)**
+- **[Zhipu AI Provider Repo](https://github.com/Xiang-CH/zhipu-ai-provider)**

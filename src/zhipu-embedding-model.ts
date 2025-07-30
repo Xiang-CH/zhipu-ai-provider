@@ -1,5 +1,5 @@
 import {
-  EmbeddingModelV1,
+  EmbeddingModelV2,
   TooManyEmbeddingValuesForCallError,
 } from "@ai-sdk/provider";
 import {
@@ -32,8 +32,8 @@ type ZhipuEmbeddingConfig = {
   fetch?: FetchFunction;
 };
 
-export class ZhipuEmbeddingModel implements EmbeddingModelV1<string> {
-  readonly specificationVersion = "v1";
+export class ZhipuEmbeddingModel implements EmbeddingModelV2<string> {
+  readonly specificationVersion = "v2" as const;
   readonly modelId: ZhipuEmbeddingModelId;
 
   private readonly config: ZhipuEmbeddingConfig;
@@ -65,8 +65,8 @@ export class ZhipuEmbeddingModel implements EmbeddingModelV1<string> {
     values,
     abortSignal,
     headers,
-  }: Parameters<EmbeddingModelV1<string>["doEmbed"]>[0]): Promise<
-    Awaited<ReturnType<EmbeddingModelV1<string>["doEmbed"]>>
+  }: Parameters<EmbeddingModelV2<string>["doEmbed"]>[0]): Promise<
+    Awaited<ReturnType<EmbeddingModelV2<string>["doEmbed"]>>
   > {
     if (values.length > this.maxEmbeddingsPerCall) {
       throw new TooManyEmbeddingValuesForCallError({
@@ -93,12 +93,16 @@ export class ZhipuEmbeddingModel implements EmbeddingModelV1<string> {
       fetch: this.config.fetch,
     });
 
+    const typedResponse = response as z.infer<
+      typeof ZhipuTextEmbeddingResponseSchema
+    >;
+
     return {
-      embeddings: response.data.map((item) => item.embedding),
-      usage: response.usage
-        ? { tokens: response.usage.prompt_tokens }
+      embeddings: typedResponse.data.map((item) => item.embedding),
+      usage: typedResponse.usage
+        ? { tokens: typedResponse.usage.prompt_tokens }
         : undefined,
-      rawResponse: { headers: responseHeaders },
+      response: { headers: responseHeaders },
     };
   }
 }
