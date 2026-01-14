@@ -249,6 +249,32 @@ describe("doGenerate", () => {
     });
   });
 
+  it("should pass providerOptions.zhipu and override base args", async () => {
+    prepareJsonResponse();
+
+    await provider
+      .chat("glm-4-flash", {
+        userId: "test-user-id",
+      })
+      .doGenerate({
+        prompt: TEST_PROMPT,
+        providerOptions: {
+          zhipu: {
+            user_id: "override-user-id",
+            temperature: 0.8,
+          },
+        },
+      });
+
+    expect(await server.calls[0].requestBodyJson).toStrictEqual({
+      model: "glm-4-flash",
+      messages: [{ role: "user", content: "Hello" }],
+      user_id: "override-user-id",
+      temperature: 0.8,
+      tool_choice: "auto",
+    });
+  });
+
   it("should pass tools and toolChoice", async () => {
     prepareJsonResponse({ content: "" });
 
@@ -838,6 +864,29 @@ describe("doStream", () => {
       stream: true,
       model: "glm-4-flash",
       messages: [{ role: "user", content: "Hello" }],
+    });
+  });
+
+  it("should pass providerOptions.zhipu in stream mode", async () => {
+    prepareStreamResponse({ content: [] });
+
+    await model.doStream({
+      prompt: TEST_PROMPT,
+      providerOptions: {
+        zhipu: {
+          temperature: 0.9,
+          top_p: 0.95,
+        },
+      },
+    });
+
+    expect(await server.calls[0].requestBodyJson).toStrictEqual({
+      stream: true,
+      model: "glm-4-flash",
+      messages: [{ role: "user", content: "Hello" }],
+      temperature: 0.9,
+      top_p: 0.95,
+      tool_choice: "auto",
     });
   });
 
