@@ -23,6 +23,25 @@ export type ZhipuChatModelId =
   | "glm-4.1v-thinking-flashx"
   | (string & {});
 
+/**
+ * Thinking mode configuration for GLM-4.5+ models.
+ * Enables deep reasoning capabilities for complex tasks.
+ */
+export interface ZhipuThinkingConfig {
+  /**
+   * Enable or disable thinking mode.
+   * - "enabled": Model will use deep reasoning before responding
+   * - "disabled": Standard response without explicit reasoning
+   */
+  type: "enabled" | "disabled";
+  /**
+   * Whether to clear thinking content from previous turns.
+   * When true, previous reasoning is not retained in context.
+   * @default false
+   */
+  clearThinking?: boolean;
+}
+
 export interface ZhipuChatSettings {
   /**
    * The unique ID of the end user, helps the platform intervene in illegal activities, generate illegal or improper information, or other abuse by the end user.
@@ -38,4 +57,12 @@ export interface ZhipuChatSettings {
    * When do_sample is true, sampling strategy is enabled, when do_sample is false, the sampling strategy temperature, top_p will not take effect
    */
   doSample?: boolean;
+  /**
+   * Enable thinking/reasoning mode for GLM-4.5+ models.
+   * When enabled, the model will perform deep reasoning before responding,
+   * which improves performance on complex tasks like coding and multi-step reasoning.
+   *
+   * @see https://docs.z.ai/guides/llm/glm-4.7
+   */
+  thinking?: ZhipuThinkingConfig;
 }
