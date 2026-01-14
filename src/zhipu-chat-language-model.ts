@@ -286,7 +286,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     const responseReasoningText =
       responseData.choices[0].message.reasoning_content;
 
-    if (responseReasoningText){
+    if (responseReasoningText) {
       content.push({
         type: "reasoning",
         text: responseReasoningText,
