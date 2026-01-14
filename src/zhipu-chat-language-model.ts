@@ -85,6 +85,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     seed,
     tools,
     toolChoice,
+    providerOptions,
   }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     // const type = mode.type;
 
@@ -149,7 +150,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     }
 
     if (
-      responseFormat != null &&
+      responseFormat &&
       responseFormat.type === "json" &&
       (this.config.isMultiModel || this.config.isReasoningModel)
     ) {
@@ -182,15 +183,23 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     }
 
     if (
-      responseFormat != null &&
+      responseFormat &&
       responseFormat.type === "json" &&
-      responseFormat.schema != null
+      responseFormat.schema
     ) {
       warnings.push({
         type: "unsupported-setting",
         setting: "responseFormat",
         details:
-          "JSON response format schema is only supported with structuredOutputs, provide the schema.",
+          "Structured output with schema is not supported, use json response format instead.",
+      });
+    }
+
+    if (toolChoice?.type !== "auto") {
+      warnings.push({
+        type: "unsupported-setting",
+        setting: "toolChoice",
+        details: "Only 'auto' tool choice is supported",
       });
     }
 
@@ -216,7 +225,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
       messages: convertToZhipuChatMessages(prompt),
 
       // tools:
-      tool_choice: toolChoice ?? "auto",
+      tool_choice: "auto",
       tools:
         tools
           ?.filter((tool) => tool.type === "function")
@@ -243,6 +252,15 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
   ): Promise<Awaited<ReturnType<LanguageModelV2["doGenerate"]>>> {
     const { args, warnings } = this.getArgs(options);
 
+    const providerOptions = options.providerOptions || {};
+    const zhipuOptions = providerOptions.zhipu || {};
+
+    const fullArgs = {
+      ...args,
+      // merge any zhipu-specific options last to allow overrides
+      ...zhipuOptions,
+    };
+
     const {
       value: response,
       rawValue: rawResponse,
@@ -250,7 +268,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     } = await postJsonToApi({
       url: `${this.config.baseURL}/chat/completions`,
       headers: combineHeaders(this.config.headers(), options.headers),
-      body: args,
+      body: fullArgs,
       failedResponseHandler: zhipuFailedResponseHandler,
       successfulResponseHandler: createJsonResponseHandler(
         zhipuChatResponseSchema,
@@ -268,6 +286,14 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     const responseText = responseData.choices[0].message.content;
     const responseReasoningText =
       responseData.choices[0].message.reasoning_content;
+
+    if (responseReasoningText){
+      content.push({
+        type: "reasoning",
+        text: responseReasoningText,
+      });
+    }
+
     if (responseText) {
       if (this.config.isReasoningModel && responseText.includes("<think>")) {
         content.push(
@@ -280,15 +306,6 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
             text: responseText.split("</think>")[1],
           },
         );
-      } else if (this.config.isReasoningModel && responseReasoningText) {
-        content.push({
-          type: "reasoning",
-          text: responseReasoningText,
-        });
-        content.push({
-          type: "text",
-          text: responseText,
-        });
       } else {
         content.push({
           type: "text",
@@ -318,7 +335,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
         inputTokens: responseData.usage.prompt_tokens,
         outputTokens: responseData.usage.completion_tokens ?? NaN,
       },
-      request: { body: args },
+      request: { body: fullArgs },
       response: {
         ...getResponseMetadata(responseData),
         headers: responseHeaders,
@@ -333,7 +350,10 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
   ): Promise<Awaited<ReturnType<LanguageModelV2["doStream"]>>> {
     const { args } = this.getArgs(options);
 
-    const body = { ...args, stream: true };
+    const providerOptions = options.providerOptions || {};
+    const zhipuOptions = providerOptions.zhipu || {};
+
+    const body = { ...args, ...zhipuOptions, stream: true };
     // const metadataExtractor = this.config.metadataExtractor?.createStreamExtractor();
 
     const { responseHeaders, value: response } = await postJsonToApi({
