@@ -1,5 +1,8 @@
 # zhipu-ai-provider
 
+## 0.2.1
+- Support for disabling thinking for hybrid models
+
 ## 0.2.0
 - Bug fix
 - providerOptions support

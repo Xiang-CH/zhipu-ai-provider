@@ -55,6 +55,32 @@ const { text } = await generateText({
 console.log(result)
 ```
 
+To disable thinking for hybrid models like `glm-4.7`, you can set the `think` option to `disable` either in the model options or in the `providerOptions`:
+```ts
+const { text } = await generateText({
+  model: zhipu('glm-4.7', {
+    think: {
+      type: 'disable'
+    }, // Disable thinking
+  }),
+  prompt: 'Explain quantum computing in simple terms.',
+});
+```
+or
+```ts
+const { text } = await generateText({
+  model: zhipu('glm-4.7'),
+  prompt: 'Explain quantum computing in simple terms.',
+  providerOptions: {
+    zhipu: {
+      think: {
+        type: 'disable'
+      }
+    }
+  }
+});
+```
+
 ## Embedding Example
 ```ts
 const { embedding } = await embed({
