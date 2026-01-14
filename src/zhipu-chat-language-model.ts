@@ -85,7 +85,6 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     seed,
     tools,
     toolChoice,
-    providerOptions,
   }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     // const type = mode.type;
 
