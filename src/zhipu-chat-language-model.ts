@@ -61,8 +61,13 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
     this.settings = settings;
     this.config = config;
     this.config.isMultiModel = this.modelId.includes("v");
+    // Model is a reasoning model if:
+    // 1. Model ID contains "z" or "thinking" (dedicated reasoning models)
+    // 2. Thinking mode is explicitly enabled via settings (GLM-4.5+ with thinking)
     this.config.isReasoningModel =
-      this.modelId.includes("z") || this.modelId.includes("thinking");
+      this.modelId.includes("z") ||
+      this.modelId.includes("thinking") ||
+      settings.thinking?.type === "enabled";
   }
 
   /**
@@ -202,6 +207,16 @@ export class ZhipuChatLanguageModel implements LanguageModelV2 {
       user_id: this.settings.userId,
       do_sample: this.settings.doSample,
       request_id: this.settings.requestId,
+
+      // thinking mode for GLM-4.5+ models:
+      thinking: this.settings.thinking
+        ? {
+            type: this.settings.thinking.type,
+            ...(this.settings.thinking.clearThinking !== undefined && {
+              clear_thinking: this.settings.thinking.clearThinking,
+            }),
+          }
+        : undefined,
 
       // standardized settings:
       max_tokens: maxOutputTokens,
