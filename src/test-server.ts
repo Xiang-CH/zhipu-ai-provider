@@ -75,7 +75,7 @@ export function createTestServer(
       const response = urlConfig.response;
 
       if (response.type === 'json-value') {
-        return HttpResponse.json(response.body, {
+        return HttpResponse.json(response.body as Record<string, unknown>, {
           headers: response.headers,
         });
       }

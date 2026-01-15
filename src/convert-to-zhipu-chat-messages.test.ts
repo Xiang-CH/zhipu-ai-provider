@@ -9,9 +9,9 @@ describe("user messages", () => {
         content: [
           { type: "text", text: "Hello" },
           {
-            type: "image",
-            image: new Uint8Array([0, 1, 2, 3]),
-            mimeType: "image/png",
+            type: "file",
+            data: new Uint8Array([0, 1, 2, 3]),
+            mediaType: "image/png",
           },
         ],
       },
@@ -39,7 +39,9 @@ describe("tool calls", () => {
         role: "tool",
         content: [
           {
+            type: "tool-result",
             toolCallId: "tool-call-id-1",
+            toolName: "tool-1",
             // v6 tool result structure: output contains type and value (changed from v5's direct "result" field)
             output: {
               type: "json",

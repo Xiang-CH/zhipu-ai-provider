@@ -29,7 +29,9 @@ const provider = createZhipu({
 const model = provider.chat("glm-4-flash");
 
 const server = createTestServer({
-  "https://open.bigmodel.cn/api/paas/v4/chat/completions": {},
+  "https://open.bigmodel.cn/api/paas/v4/chat/completions": {
+    response: { type: "json-value", body: {} },
+  },
 });
 
 describe("doGenerate", () => {
@@ -146,7 +148,7 @@ describe("doGenerate", () => {
       prompt: TEST_PROMPT,
     });
 
-    expect(request.body).toMatchObject({
+    expect(request?.body).toMatchObject({
       model: "glm-4-flash",
       messages: [{ role: "user", content: "Hello" }],
     });
@@ -796,7 +798,7 @@ describe("doStream", () => {
       prompt: TEST_PROMPT,
     });
 
-    expect(request.body).toMatchObject({
+    expect(request?.body).toMatchObject({
       model: "glm-4-flash",
       messages: [{ role: "user", content: "Hello" }],
       stream: true,

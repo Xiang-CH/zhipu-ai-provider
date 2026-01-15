@@ -14,7 +14,9 @@ const model = provider.embeddingModel("embedding-3");
 
 describe("doEmbed", () => {
   const server = createTestServer({
-    "https://open.bigmodel.cn/api/paas/v4/embeddings": {},
+    "https://open.bigmodel.cn/api/paas/v4/embeddings": {
+      response: { type: "json-value", body: {} },
+    },
   });
 
   function prepareJsonResponse({
