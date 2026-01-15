@@ -110,7 +110,7 @@ describe("doEmbed", () => {
     });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/embeddings"].calls;
-    const headers = calls[calls.length - 1].requestHeaders as any;
+    const headers = calls[calls.length - 1].requestHeaders as Record<string, string>;
     expect(headers.authorization).toBe("Bearer test-api-key");
     expect(headers["content-type"]).toBe("application/json");
     expect(headers["custom-provider-header"]).toBe("provider-header-value");

@@ -4,6 +4,19 @@ import { convertReadableStreamToArray } from "@ai-sdk/provider-utils/test";
 import { createZhipu } from "./zhipu-provider";
 import { createTestServer } from "./test-server";
 
+// Zhipu API request body structure (subset of fields used in tests)
+type ZhipuRequestBody = {
+  model: string;
+  messages: unknown[];
+  user_id?: string;
+  temperature?: number;
+  top_p?: number;
+  tools?: unknown[];
+  tool_choice?: string;
+  stream?: boolean;
+  response_format?: { type: string };
+};
+
 const TEST_PROMPT: LanguageModelV2Prompt = [
   { role: "user", content: [{ type: "text", text: "Hello" }] },
 ];
@@ -223,7 +236,7 @@ describe("doGenerate", () => {
     });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const body = calls[calls.length - 1].requestBodyJson as any;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
     expect(body.model).toBe("glm-4-flash");
     expect(body.messages).toEqual([{ role: "user", content: "Hello" }]);
   });
@@ -240,7 +253,7 @@ describe("doGenerate", () => {
       });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const body = calls[calls.length - 1].requestBodyJson as any;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
     expect(body.model).toBe("glm-4-flash");
     expect(body.messages).toEqual([{ role: "user", content: "Hello" }]);
     expect(body.user_id).toBe("test-user-id");
@@ -264,7 +277,7 @@ describe("doGenerate", () => {
       });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const body = calls[calls.length - 1].requestBodyJson as any;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
     expect(body.model).toBe("glm-4-flash");
     expect(body.messages).toEqual([{ role: "user", content: "Hello" }]);
     expect(body.user_id).toBe("override-user-id");
@@ -297,7 +310,7 @@ describe("doGenerate", () => {
     });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const body = calls[calls.length - 1].requestBodyJson as any;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
     expect(body.model).toBe("glm-4-flash");
     expect(body.messages).toEqual([{ role: "user", content: "Hello" }]);
     expect(body.tools).toEqual([
@@ -336,7 +349,7 @@ describe("doGenerate", () => {
     });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const headers = calls[calls.length - 1].requestHeaders as any;
+    const headers = calls[calls.length - 1].requestHeaders as Record<string, string>;
     expect(headers.authorization).toBe(`Bearer ${TEST_API_KEY}`);
     expect(headers["content-type"]).toBe("application/json");
     expect(headers["custom-provider-header"]).toBe("provider-header-value");
@@ -384,6 +397,7 @@ describe("doGenerate", () => {
         toolCallId: "call_O17Uplv4lJvD6DVdIvFFeRMw",
         toolName: "test-tool",
         input: '{"value":"Spark"}',
+        // v6 field: false indicates the provider did not execute the tool; execution is delegated to the client.
         providerExecuted: false,
       },
     ]);
@@ -418,7 +432,7 @@ describe("doGenerate", () => {
       });
 
       const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const body = calls[calls.length - 1].requestBodyJson as any;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
       expect(body.model).toBe("glm-4-flash");
       expect(body.messages).toEqual([{ role: "user", content: "Hello" }]);
       expect(body.response_format).toEqual({ type: "json_object" });
@@ -820,7 +834,7 @@ describe("doStream", () => {
     });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const body = calls[calls.length - 1].requestBodyJson as any;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
     expect(body.stream).toBe(true);
     expect(body.model).toBe("glm-4-flash");
     expect(body.messages).toEqual([{ role: "user", content: "Hello" }]);
@@ -840,7 +854,7 @@ describe("doStream", () => {
     });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const body = calls[calls.length - 1].requestBodyJson as any;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
     expect(body.stream).toBe(true);
     expect(body.model).toBe("glm-4-flash");
     expect(body.messages).toEqual([{ role: "user", content: "Hello" }]);
@@ -867,7 +881,7 @@ describe("doStream", () => {
     });
 
     const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"].calls;
-    const headers = calls[calls.length - 1].requestHeaders as any;
+    const headers = calls[calls.length - 1].requestHeaders as Record<string, string>;
     expect(headers.authorization).toBe(`Bearer ${TEST_API_KEY}`);
     expect(headers["content-type"]).toBe("application/json");
     expect(headers["custom-provider-header"]).toBe("provider-header-value");

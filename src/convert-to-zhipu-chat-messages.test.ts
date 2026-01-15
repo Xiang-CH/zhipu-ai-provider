@@ -40,6 +40,7 @@ describe("tool calls", () => {
         content: [
           {
             toolCallId: "tool-call-id-1",
+            // v6 tool result structure: output contains type and value (changed from v5's direct "result" field)
             output: {
               type: "json",
               value: { key: "result-value" },
