@@ -29,7 +29,7 @@ describe("tool calls", () => {
         content: [
           {
             type: "tool-call",
-            args: { key: "arg-value" },
+            input: { key: "arg-value" },
             toolCallId: "tool-call-id-1",
             toolName: "tool-1",
           },
@@ -39,10 +39,11 @@ describe("tool calls", () => {
         role: "tool",
         content: [
           {
-            type: "tool-result",
             toolCallId: "tool-call-id-1",
-            toolName: "tool-1",
-            result: { key: "result-value" },
+            output: {
+              type: "json",
+              value: { key: "result-value" },
+            },
           },
         ],
       },

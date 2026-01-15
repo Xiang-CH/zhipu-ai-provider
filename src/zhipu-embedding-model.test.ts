@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EmbeddingModelV2Embedding } from "@ai-sdk/provider";
-import { createTestServer } from "@ai-sdk/provider-utils/test";
 import { createZhipu } from "./zhipu-provider";
+import { createTestServer } from "./test-server";
 
 const dummyEmbeddings = [
   [0.1, 0.2, 0.3, 0.4, 0.5],
@@ -10,7 +10,7 @@ const dummyEmbeddings = [
 const testValues = ["sunny day at the beach", "rainy day in the city"];
 
 const provider = createZhipu({ apiKey: "test-api-key" });
-const model = provider.textEmbeddingModel("embedding-3");
+const model = provider.embeddingModel("embedding-3");
 
 describe("doEmbed", () => {
   const server = createTestServer({
@@ -85,7 +85,8 @@ describe("doEmbed", () => {
 
     await model.doEmbed({ values: testValues });
 
-    expect(await server.calls[0].requestBodyJson).toStrictEqual({
+    const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/embeddings"].calls;
+    expect(await calls[calls.length - 1].requestBodyJson).toStrictEqual({
       model: "embedding-3",
       input: testValues,
     });
@@ -101,18 +102,18 @@ describe("doEmbed", () => {
       },
     });
 
-    await provider.textEmbeddingModel("embedding-3").doEmbed({
+    await provider.embeddingModel("embedding-3").doEmbed({
       values: testValues,
       headers: {
         "Custom-Request-Header": "request-header-value",
       },
     });
 
-    expect(server.calls[0].requestHeaders).toStrictEqual({
-      authorization: "Bearer test-api-key",
-      "content-type": "application/json",
-      "custom-provider-header": "provider-header-value",
-      "custom-request-header": "request-header-value",
-    });
+    const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/embeddings"].calls;
+    const headers = calls[calls.length - 1].requestHeaders as any;
+    expect(headers.authorization).toBe("Bearer test-api-key");
+    expect(headers["content-type"]).toBe("application/json");
+    expect(headers["custom-provider-header"]).toBe("provider-header-value");
+    expect(headers["custom-request-header"]).toBe("request-header-value");
   });
 });
