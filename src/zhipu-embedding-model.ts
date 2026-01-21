@@ -83,7 +83,7 @@ export class ZhipuEmbeddingModel implements EmbeddingModelV2<string> {
       body: {
         model: this.modelId,
         input: values,
-        dimension: this.settings.dimensions,
+        dimensions: this.settings.dimensions,
       },
       failedResponseHandler: zhipuFailedResponseHandler,
       successfulResponseHandler: createJsonResponseHandler(
@@ -103,6 +103,8 @@ export class ZhipuEmbeddingModel implements EmbeddingModelV2<string> {
         ? { tokens: typedResponse.usage.prompt_tokens }
         : undefined,
       response: { headers: responseHeaders },
+      // @ts-ignore
+      warnings: [],
     };
   }
 }
