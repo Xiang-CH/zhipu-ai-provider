@@ -113,8 +113,17 @@ export class ZhipuImageModel implements ImageModelV2 {
 
     const typedResponse = response as z.infer<typeof zhipuImageResponseSchema>;
 
+     // Fetch binary content from each image URL
+    const images = await Promise.all(
+      typedResponse.data.map(async (item) => {
+        const imageResponse = await fetch(item.url, { signal: abortSignal });
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        return new Uint8Array(arrayBuffer);
+      }),
+    );
+
     return {
-      images: typedResponse.data.map((item) => item.url),
+      images: images,
       warnings,
       providerMetadata: {
         zhipu: {
