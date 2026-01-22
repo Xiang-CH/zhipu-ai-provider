@@ -1,5 +1,5 @@
 # Zhipu AI Provider - Vercel AI SDK Community Provider
-This is a [Zhipu](https://www.zhipuai.cn/) prodiver for the [AI SDK](https://sdk.vercel.ai/). It enables seamless integration with **GLM** and Embedding Models provided on [bigmodel.cn](https://bigmodel.cn/).
+This is a [Zhipu](https://www.zhipuai.cn/) (Z.ai) prodiver for the [Vercel AI SDK](https://sdk.vercel.ai/). It enables seamless integration with Language (**GLM**), Embedding and Image Models provided on [bigmodel.cn](https://bigmodel.cn/) or [z.ai](https://docs.z.ai/) by [ZhipuAI](https://www.zhipuai.cn/).
 
 
 ## Setup
@@ -13,6 +13,9 @@ pnpm add zhipu-ai-provider
 
 # yarn
 yarn add zhipu-ai-provider
+
+# bun
+bun add zhipu-ai-provider
 ```
 Set up your `.env` file / environment with your API key.
 ```bash
@@ -22,7 +25,9 @@ ZHIPU_API_KEY=<your-api-key>
 ## Provider Instance
 You can import the default provider instance `zhipu` from `zhipu-ai-provider` (This automatically reads the API key from the environment variable `ZHIPU_API_KEY`):
 ```ts
-import { zhipu } from 'zhipu-ai-provider'
+import { zhipu } from 'zhipu-ai-provider' // for bigmodel.cn
+// or
+import { zai } from 'zhipu-ai-provider' // for z.ai
 ```
 Alternatively, you can create a provider instance with custom configuration with `createZhipu`:
 ```ts
@@ -94,7 +99,7 @@ console.log(embedding);
 ```
 
 ## Image Generation Example
-Zhipu supports image generation with the `cogview` models, but the api does not return images in base64 or buffer format, so the image urls are returned in the `providerMetadata` field.
+Zhipu supports image generation with `glm-image` or `cogview` models, but the api does not return images in base64 or buffer format, so the image urls are returned in the `providerMetadata` field.
 
 ```ts
 import { experimental_generateImage as generateImage } from 'ai';
@@ -126,9 +131,11 @@ console.log(providerMetadata.zhipu.images[0].url)
 - [x] Vision
 - [x] Vision Reasoning
 - [ ] Provider-defined tools
-- [ ] Voice Models
+- [ ] Video Models
+- [ ] Audio Models
 
 ## Documentation
 - **[Zhipu documentation](https://bigmodel.cn/dev/welcome)** 
+- **[Z.AI documentation](https://docs.z.ai/)**
 - **[Vercel AI SDK documentation](https://sdk.vercel.ai/docs/introduction)**
 - **[Zhipu AI Provider Repo](https://github.com/Xiang-CH/zhipu-ai-provider)**

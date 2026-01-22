@@ -2,9 +2,9 @@ import { z } from "zod";
 
 // https://bigmodel.cn/dev/api/vector/embedding
 export type ZhipuImageModelId =
+  | "glm-image"
   | "cogview-3-flash"
   | "cogview-4"
-  | "cogview-4-250304"
   | (string & {});
 
 const sizeSchema = z

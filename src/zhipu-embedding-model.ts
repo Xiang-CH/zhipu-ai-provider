@@ -103,7 +103,7 @@ export class ZhipuEmbeddingModel implements EmbeddingModelV2<string> {
         ? { tokens: typedResponse.usage.prompt_tokens }
         : undefined,
       response: { headers: responseHeaders },
-      // @ts-ignore
+      // @ts-expect-error - Temporary for Vercel AI SDK V6 compatibility
       warnings: [],
     };
   }

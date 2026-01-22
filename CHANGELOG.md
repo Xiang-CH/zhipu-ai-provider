@@ -1,5 +1,9 @@
 # zhipu-ai-provider
 
+## 0.2.2
+- Bug fix for embedding model custom dimensions
+- Direct import support for z.ai API
+
 ## 0.2.1
 - Support for disabling thinking for hybrid models
 

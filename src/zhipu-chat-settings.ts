@@ -1,26 +1,32 @@
 // https://bigmodel.cn/dev/howuse/model
 export type ZhipuChatModelId =
   // Language models
-  | "glm-4-plus"
-  | "glm-4-air-250414"
-  | "glm-4-air"
-  | "glm-4-airx"
-  | "glm-4-long"
-  | "glm-4-flash"
+  | "glm-4.7"
+  | "glm-4.7-flash"
+  | "glm-4.7-flashx"
+  | "glm-4.6"
+  | "glm-4.6-flash"
+  | "glm-4.6-flashx"
+  | "glm-4.5"
+  | "glm-4.5-flash"
+  | "glm-4.5-flashx"
+  | "glm-4.5-air"
+  | "glm-4.5-airx"
   | "glm-4-flash-250414"
-  | "glm-4-flashx"
+  | "glm-4-flashx-250414"
   // Vision/Video Models
-  | "glm-4v-plus-0111"
-  | "glm-4v-plus"
+  | "autoglm-phone"
+  | "glm-4.6v"
+  | "glm-4.6v-flash"
+  | "glm-4.6v-flashx"
+  | "glm-4.1v-thinking-flash"
+  | "glm-4.1v-thinking-flashx"
   | "glm-4v"
   | "glm-4v-flash"
   // Reasoning Models
   | "glm-z1-air"
   | "glm-z1-airx"
   | "glm-z1-flash"
-  // Vision Reasoning Models
-  | "glm-4.1v-thinking-flash"
-  | "glm-4.1v-thinking-flashx"
   | (string & {});
 
 /**
