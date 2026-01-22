@@ -148,6 +148,11 @@ export function createZhipu(
 }
 
 /**
-Default Zhipu provider instance.
+Default Zhipu provider instance for bigmodel.cn API.
  */
 export const zhipu = createZhipu();
+
+/**
+Default Z.ai provider instance for z.ai API.
+ */
+export const zai = createZhipu({ baseURL: "https://api.z.ai/api/paas/v4" });
