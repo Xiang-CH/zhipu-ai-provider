@@ -1,5 +1,8 @@
 # zhipu-ai-provider
 
+## 0.3.0
+- Support for ai-sdk-v6
+
 ## 0.2.2
 - Bug fix for embedding model custom dimensions
 - Direct import support for z.ai API
