@@ -1,20 +1,20 @@
-import { LanguageModelV2FinishReason } from "@ai-sdk/provider";
+import { LanguageModelV3FinishReason } from "@ai-sdk/provider";
 
 export function mapZhipuFinishReason(
   finishReason: string | null | undefined,
-): LanguageModelV2FinishReason {
+): LanguageModelV3FinishReason {
   switch (finishReason) {
     case "stop":
-      return "stop";
+      return { unified: "stop", raw: finishReason };
     case "length":
-      return "length";
+      return { unified: "length", raw: finishReason };
     case "tool_calls":
-      return "tool-calls";
+      return { unified: "tool-calls", raw: finishReason };
     case "sensitive":
-      return "content-filter";
+      return { unified: "content-filter", raw: finishReason };
     case "network_error":
-      return "error";
+      return { unified: "error", raw: finishReason };
     default:
-      return "unknown";
+      return { unified: "other", raw: finishReason ?? undefined };
   }
 }

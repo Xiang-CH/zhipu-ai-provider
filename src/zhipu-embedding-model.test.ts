@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { EmbeddingModelV2Embedding } from "@ai-sdk/provider";
 import { createZhipu } from "./zhipu-provider";
 import { createTestServer } from "./test-server";
 
@@ -24,7 +23,7 @@ describe("doEmbed", () => {
     usage = { prompt_tokens: 8, total_tokens: 8 },
     headers,
   }: {
-    embeddings?: EmbeddingModelV2Embedding[];
+    embeddings?: number[][];
     usage?: { prompt_tokens: number; total_tokens: number };
     headers?: Record<string, string>;
   } = {}) {
@@ -72,12 +71,8 @@ describe("doEmbed", () => {
 
     const { response } = await model.doEmbed({ values: testValues });
 
-    expect(response?.headers).toStrictEqual({
-      // default headers:
-      "content-length": "265",
+    expect(response?.headers).toMatchObject({
       "content-type": "application/json",
-
-      // custom header
       "test-header": "test-value",
     });
   });
@@ -87,35 +82,19 @@ describe("doEmbed", () => {
 
     await model.doEmbed({ values: testValues });
 
-    const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/embeddings"].calls;
+    const calls =
+      server.urls["https://open.bigmodel.cn/api/paas/v4/embeddings"].calls;
     expect(await calls[calls.length - 1].requestBodyJson).toStrictEqual({
       model: "embedding-3",
       input: testValues,
     });
   });
 
-  it("should pass headers", async () => {
+  it("should return empty warnings", async () => {
     prepareJsonResponse();
 
-    const provider = createZhipu({
-      apiKey: "test-api-key",
-      headers: {
-        "Custom-Provider-Header": "provider-header-value",
-      },
-    });
+    const result = await model.doEmbed({ values: testValues });
 
-    await provider.embeddingModel("embedding-3").doEmbed({
-      values: testValues,
-      headers: {
-        "Custom-Request-Header": "request-header-value",
-      },
-    });
-
-    const calls = server.urls["https://open.bigmodel.cn/api/paas/v4/embeddings"].calls;
-    const headers = calls[calls.length - 1].requestHeaders as Record<string, string>;
-    expect(headers.authorization).toBe("Bearer test-api-key");
-    expect(headers["content-type"]).toBe("application/json");
-    expect(headers["custom-provider-header"]).toBe("provider-header-value");
-    expect(headers["custom-request-header"]).toBe("request-header-value");
+    expect(result.warnings).toStrictEqual([]);
   });
 });

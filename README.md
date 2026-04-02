@@ -1,5 +1,5 @@
 # Zhipu AI Provider - Vercel AI SDK Community Provider
-This is a [Zhipu](https://www.zhipuai.cn/) (Z.ai) prodiver for the [Vercel AI SDK](https://sdk.vercel.ai/). It enables seamless integration with Language (**GLM**), Embedding and Image Models provided on [bigmodel.cn](https://bigmodel.cn/) or [z.ai](https://docs.z.ai/) by [ZhipuAI](https://www.zhipuai.cn/).
+This is a [Zhipu](https://www.zhipuai.cn/) (Z.ai) provider for the [Vercel AI SDK](https://ai-sdk.dev/). It supports AI SDK 6 and the `LanguageModelV3` custom-provider contract for language models, plus embedding and image models provided on [bigmodel.cn](https://bigmodel.cn/) or [z.ai](https://docs.z.ai/) by [ZhipuAI](https://www.zhipuai.cn/).
 
 
 ## Setup
@@ -60,13 +60,13 @@ const { text } = await generateText({
 console.log(result)
 ```
 
-To disable thinking for hybrid models like `glm-4.7`, you can set the `think` option to `disable` either in the model options or in the `providerOptions`:
+To disable thinking for hybrid models like `glm-4.7`, set `thinking.type` to `disabled` either in the model options or in `providerOptions.zhipu`:
 ```ts
 const { text } = await generateText({
   model: zhipu('glm-4.7', {
-    think: {
-      type: 'disable'
-    }, // Disable thinking
+    thinking: {
+      type: 'disabled'
+    },
   }),
   prompt: 'Explain quantum computing in simple terms.',
 });
@@ -78,18 +78,20 @@ const { text } = await generateText({
   prompt: 'Explain quantum computing in simple terms.',
   providerOptions: {
     zhipu: {
-      think: {
-        type: 'disable'
+      thinking: {
+        type: 'disabled'
       }
     }
   }
 });
 ```
 
+Only function tools are supported. Provider-defined tools are not currently implemented.
+
 ## Embedding Example
 ```ts
 const { embedding } = await embed({
-  model: zhipu.textEmbeddingModel("embedding-3", {
+  model: zhipu.embeddingModel("embedding-3", {
     dimensions: 256, // Optional, defaults to 2048
   }),
   value: "Hello, world!",
@@ -97,6 +99,8 @@ const { embedding } = await embed({
 
 console.log(embedding);
 ```
+
+`textEmbeddingModel(...)` is still available as a deprecated compatibility alias.
 
 ## Image Generation Example
 Zhipu supports image generation with `glm-image` or `cogview` models, but the api does not return images in base64 or buffer format, so the image urls are returned in the `providerMetadata` field.
@@ -106,7 +110,7 @@ import { experimental_generateImage as generateImage } from 'ai';
 import { zhipu } from 'zhipu-ai-provider';
 
 const { image, providerMetadata } = await generateImage({
-  model: zhipu.ImageModel('cogview-4-250304'),
+  model: zhipu.imageModel('cogview-4-250304'),
   prompt: 'A beautiful landscape with mountains and a river',
   size: '1024x1024',  // optional
   providerOptions: {  // optional
@@ -126,10 +130,11 @@ console.log(providerMetadata.zhipu.images[0].url)
 - [x] Chat
 - [x] Tools
 - [x] Streaming
-- [x] Structured output
+- [x] JSON response format
 - [x] Reasoning
 - [x] Vision
 - [x] Vision Reasoning
+- [ ] Schema-guided structured output for reasoning and vision models
 - [ ] Provider-defined tools
 - [ ] Video Models
 - [ ] Audio Models

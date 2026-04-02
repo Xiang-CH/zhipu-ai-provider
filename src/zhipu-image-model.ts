@@ -1,4 +1,4 @@
-import { ImageModelV2, ImageModelV2CallWarning } from "@ai-sdk/provider";
+import { ImageModelV3 } from "@ai-sdk/provider";
 import {
   combineHeaders,
   createJsonErrorResponseHandler,
@@ -24,8 +24,8 @@ export type ZhipuImageModelConfig = {
   };
 };
 
-export class ZhipuImageModel implements ImageModelV2 {
-  readonly specificationVersion = "v2";
+export class ZhipuImageModel implements ImageModelV3 {
+  readonly specificationVersion = "v3" as const;
   readonly maxImagesPerCall = 10;
 
   get provider(): string {
@@ -46,34 +46,38 @@ export class ZhipuImageModel implements ImageModelV2 {
     providerOptions,
     headers,
     abortSignal,
-  }: Parameters<ImageModelV2["doGenerate"]>[0]): Promise<
-    Awaited<ReturnType<ImageModelV2["doGenerate"]>>
+  }: Parameters<ImageModelV3["doGenerate"]>[0]): Promise<
+    Awaited<ReturnType<ImageModelV3["doGenerate"]>>
   > {
-    const warnings: Array<ImageModelV2CallWarning> = [];
+    const warnings: Array<{
+      type: "unsupported";
+      feature: string;
+      details?: string;
+    }> = [];
 
     const zhipuProviderOptions = providerOptions
       ? (providerOptions.zhipu as ZhipuImageProviderOptions) ?? {}
       : {};
 
-    if (n != null) {
+    if (n !== 1) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "n",
+        type: "unsupported",
+        feature: "n",
         details: "This model does not support multiple images per call.",
       });
     }
 
     if (aspectRatio != null) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "aspectRatio",
+        type: "unsupported",
+        feature: "aspectRatio",
         details:
           "This model does not support aspect ratio. Use `size` instead.",
       });
     }
 
     if (seed != null) {
-      warnings.push({ type: "unsupported-setting", setting: "seed" });
+      warnings.push({ type: "unsupported", feature: "seed" });
     }
 
     if (
@@ -113,7 +117,6 @@ export class ZhipuImageModel implements ImageModelV2 {
 
     const typedResponse = response as z.infer<typeof zhipuImageResponseSchema>;
 
-     // Fetch binary content from each image URL
     const images = await Promise.all(
       typedResponse.data.map(async (item) => {
         const imageResponse = await fetch(item.url, { signal: abortSignal });
@@ -123,15 +126,11 @@ export class ZhipuImageModel implements ImageModelV2 {
     );
 
     return {
-      images: images,
+      images,
       warnings,
       providerMetadata: {
         zhipu: {
-          images: typedResponse.data.map((item) => {
-            return {
-              url: item.url,
-            };
-          }),
+          images: typedResponse.data.map((item) => ({ url: item.url })),
         },
       },
       response: {
@@ -143,8 +142,6 @@ export class ZhipuImageModel implements ImageModelV2 {
   }
 }
 
-// minimal version of the schema, focussed on what is needed for the implementation
-// this approach limits breakages when the API changes and increases efficiency
 const zhipuImageResponseSchema = z.object({
   created: z.number(),
   data: z.array(z.object({ url: z.url() })),

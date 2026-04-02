@@ -1,7 +1,8 @@
 import {
-  EmbeddingModelV2,
-  LanguageModelV2,
-  ProviderV2,
+  EmbeddingModelV3,
+  ImageModelV3,
+  LanguageModelV3,
+  ProviderV3,
 } from "@ai-sdk/provider";
 import {
   FetchFunction,
@@ -11,81 +12,54 @@ import {
 import { ZhipuChatLanguageModel } from "./zhipu-chat-language-model";
 import { ZhipuChatModelId, ZhipuChatSettings } from "./zhipu-chat-settings";
 import { ZhipuEmbeddingModel } from "./zhipu-embedding-model";
-import { ZhipuImageModelId } from "./zhipu-image-options";
-import { ZhipuImageModel } from "./zhipu-image-model";
 import {
   ZhipuEmbeddingModelId,
   ZhipuEmbeddingSettings,
 } from "./zhipu-embedding-settings";
+import { ZhipuImageModel } from "./zhipu-image-model";
+import { ZhipuImageModelId } from "./zhipu-image-options";
 
-export interface ZhipuProvider extends ProviderV2 {
-  (modelId: ZhipuChatModelId, settings?: ZhipuChatSettings): LanguageModelV2;
+export interface ZhipuProvider extends ProviderV3 {
+  (modelId: ZhipuChatModelId, settings?: ZhipuChatSettings): LanguageModelV3;
 
-  /**
-Creates a model for text generation.
-*/
   languageModel(
     modelId: ZhipuChatModelId,
     settings?: ZhipuChatSettings,
-  ): LanguageModelV2;
+  ): LanguageModelV3;
 
-  /**
-Creates a model for text generation.
-*/
   chat(
     modelId: ZhipuChatModelId,
     settings?: ZhipuChatSettings,
-  ): LanguageModelV2;
+  ): LanguageModelV3;
 
-  // Note: Both `textEmbeddingModel` (v5) and `embeddingModel` (v6) are supported for
-  // backward compatibility. `textEmbeddingModel` was renamed in AI SDK v6.
-
-  /**
-Creates a model for text embedding.
-@deprecated Use `embeddingModel` instead. Kept for AI SDK v5 compatibility.
-*/
-  textEmbeddingModel: (
+  /** @deprecated Use embedding or embeddingModel instead */
+  textEmbeddingModel(
     modelId: ZhipuEmbeddingModelId,
     settings?: ZhipuEmbeddingSettings,
-  ) => EmbeddingModelV2<string>;
+  ): EmbeddingModelV3;
 
-  /**
-Creates a model for text embedding.
-*/
-  embeddingModel: (
+  embedding(
     modelId: ZhipuEmbeddingModelId,
     settings?: ZhipuEmbeddingSettings,
-  ) => EmbeddingModelV2<string>;
+  ): EmbeddingModelV3;
+
+  embeddingModel(
+    modelId: ZhipuEmbeddingModelId,
+    settings?: ZhipuEmbeddingSettings,
+  ): EmbeddingModelV3;
+
+  image(modelId: ZhipuImageModelId): ImageModelV3;
+
+  imageModel(modelId: ZhipuImageModelId): ImageModelV3;
 }
 
 export interface ZhipuProviderSettings {
-  /**
-Use a different URL prefix for API calls, e.g. to use proxy servers.
-The default prefix is `https://open.bigmodel.cn/api/paas/v4`.
-   */
   baseURL?: string;
-
-  /**
-API key that is being send using the `Authorization` header.
-It defaults to the `ZHIPU_API_KEY` environment variable.
-   */
   apiKey?: string;
-
-  /**
-Custom headers to include in the requests.
-     */
   headers?: Record<string, string>;
-
-  /**
-Custom fetch implementation. You can use it as a middleware to intercept requests,
-or to provide a custom fetch implementation for e.g. testing.
-    */
   fetch?: FetchFunction;
 }
 
-/**
-Create a Zhipu AI provider instance.
- */
 export function createZhipu(
   options: ZhipuProviderSettings = {},
 ): ZhipuProvider {
@@ -135,37 +109,31 @@ export function createZhipu(
       },
     });
 
-  const provider = function (
-    modelId: ZhipuChatModelId,
-    settings?: ZhipuChatSettings,
-  ) {
-    if (new.target) {
-      throw new Error(
-        "The Zhipu model function cannot be called with the new keyword.",
-      );
-    }
+  const provider = Object.assign(
+    function (modelId: ZhipuChatModelId, settings?: ZhipuChatSettings) {
+      if (new.target) {
+        throw new Error(
+          "The Zhipu model function cannot be called with the new keyword.",
+        );
+      }
 
-    return createChatModel(modelId, settings);
-  };
-
-  provider.languageModel = createChatModel;
-  provider.chat = createChatModel;
-
-  provider.textEmbeddingModel = createEmbeddingModel;
-  provider.embeddingModel = createEmbeddingModel;
-
-  provider.image = createImageModel;
-  provider.imageModel = createImageModel;
+      return createChatModel(modelId, settings);
+    } as unknown as ZhipuProvider,
+    {
+      specificationVersion: "v3" as const,
+      languageModel: createChatModel,
+      chat: createChatModel,
+      /** @deprecated Use embedding or embeddingModel instead */
+      textEmbeddingModel: createEmbeddingModel,
+      embedding: createEmbeddingModel,
+      embeddingModel: createEmbeddingModel,
+      image: createImageModel,
+      imageModel: createImageModel,
+    },
+  );
 
   return provider;
 }
 
-/**
-Default Zhipu provider instance for bigmodel.cn API.
- */
 export const zhipu = createZhipu();
-
-/**
-Default Z.ai provider instance for z.ai API.
- */
 export const zai = createZhipu({ baseURL: "https://api.z.ai/api/paas/v4" });

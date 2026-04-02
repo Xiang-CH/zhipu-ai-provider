@@ -1,12 +1,12 @@
 import {
-  LanguageModelV2Prompt,
+  LanguageModelV3Prompt,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 import { convertUint8ArrayToBase64 } from "@ai-sdk/provider-utils";
 import { ZhipuPrompt } from "./zhipu-chat-prompt";
 
 export function convertToZhipuChatMessages(
-  prompt: LanguageModelV2Prompt,
+  prompt: LanguageModelV3Prompt,
 ): ZhipuPrompt {
   const messages: ZhipuPrompt = [];
 
@@ -51,9 +51,7 @@ export function convertToZhipuChatMessages(
                           ? part.data.toString()
                           : typeof part.data === "string"
                             ? part.data
-                            : `data:${
-                                part.mediaType ?? "image/jpeg"
-                              };base64,${convertUint8ArrayToBase64(part.data)}`,
+                            : `data:${part.mediaType};base64,${convertUint8ArrayToBase64(part.data)}`,
                     },
                   };
                 }
@@ -94,8 +92,10 @@ export function convertToZhipuChatMessages(
               text += part.text;
               break;
             }
-            case "reasoning": {
-              break; // ignored
+            case "reasoning":
+            case "file":
+            case "tool-result": {
+              break;
             }
             case "tool-call": {
               toolCalls.push({
@@ -109,11 +109,12 @@ export function convertToZhipuChatMessages(
               break;
             }
             default: {
-              const _exhaustiveCheck: never = part as never;
+              const _exhaustiveCheck: never = part;
               throw new Error(`Unsupported part: ${_exhaustiveCheck}`);
             }
           }
         }
+
         messages.push({
           role: "assistant",
           content: text,
@@ -125,19 +126,30 @@ export function convertToZhipuChatMessages(
 
       case "tool": {
         for (const toolResponse of content) {
-          const output = toolResponse.output;
+          if (toolResponse.type !== "tool-result") {
+            continue;
+          }
 
+          const output = toolResponse.output;
           let contentValue: string;
+
           switch (output.type) {
             case "text":
             case "error-text":
               contentValue = output.value;
+              break;
+            case "execution-denied":
+              contentValue = output.reason ?? "Tool execution denied";
               break;
             case "content":
             case "json":
             case "error-json":
               contentValue = JSON.stringify(output.value);
               break;
+            default: {
+              const _exhaustiveCheck: never = output;
+              throw new Error(`Unsupported tool output: ${_exhaustiveCheck}`);
+            }
           }
 
           messages.push({

@@ -1,14 +1,14 @@
-import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 export type TestServerResponse =
   | {
-      type: 'json-value';
+      type: "json-value";
       headers?: Record<string, string>;
       body: unknown;
     }
   | {
-      type: 'stream-chunks';
+      type: "stream-chunks";
       headers?: Record<string, string>;
       chunks: string[];
     };
@@ -35,7 +35,7 @@ export type TestServer = {
 };
 
 export function createTestServer(
-  urls: Record<string, Omit<TestServerUrl, 'calls'>>,
+  urls: Record<string, Omit<TestServerUrl, "calls">>,
 ): TestServer {
   const serverUrls: Record<string, TestServerUrl> = {};
   const allCalls: ServerCall[] = [];
@@ -59,7 +59,7 @@ export function createTestServer(
       try {
         requestBodyJson = JSON.parse(requestBody);
       } catch (e) {
-        console.error('Failed to parse request body:', requestBody);
+        console.error("Failed to parse request body:", requestBody);
         throw e;
       }
 
@@ -74,18 +74,18 @@ export function createTestServer(
 
       const response = urlConfig.response;
 
-      if (response.type === 'json-value') {
+      if (response.type === "json-value") {
         return HttpResponse.json(response.body as Record<string, unknown>, {
           headers: response.headers,
         });
       }
 
-      if (response.type === 'stream-chunks') {
-        return new Response(response.chunks.join(''), {
+      if (response.type === "stream-chunks") {
+        return new Response(response.chunks.join(""), {
           headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            Connection: 'keep-alive',
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
             ...response.headers,
           },
         });

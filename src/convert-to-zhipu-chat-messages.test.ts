@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { convertToZhipuChatMessages } from "./convert-to-zhipu-chat-messages";
 
 describe("user messages", () => {
-  it("should convert messages with image parts", async () => {
+  it("should convert messages with image parts", () => {
     const result = convertToZhipuChatMessages([
       {
         role: "user",
@@ -42,7 +42,6 @@ describe("tool calls", () => {
             type: "tool-result",
             toolCallId: "tool-call-id-1",
             toolName: "tool-1",
-            // v6 tool result structure: output contains type and value (changed from v5's direct "result" field)
             output: {
               type: "json",
               value: { key: "result-value" },
