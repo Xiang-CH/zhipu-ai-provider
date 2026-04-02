@@ -37,10 +37,22 @@ Creates a model for text generation.
     settings?: ZhipuChatSettings,
   ): LanguageModelV2;
 
+  // Note: Both `textEmbeddingModel` (v5) and `embeddingModel` (v6) are supported for
+  // backward compatibility. `textEmbeddingModel` was renamed in AI SDK v6.
+
+  /**
+Creates a model for text embedding.
+@deprecated Use `embeddingModel` instead. Kept for AI SDK v5 compatibility.
+*/
+  textEmbeddingModel: (
+    modelId: ZhipuEmbeddingModelId,
+    settings?: ZhipuEmbeddingSettings,
+  ) => EmbeddingModelV2<string>;
+
   /**
 Creates a model for text embedding.
 */
-  textEmbeddingModel: (
+  embeddingModel: (
     modelId: ZhipuEmbeddingModelId,
     settings?: ZhipuEmbeddingSettings,
   ) => EmbeddingModelV2<string>;
@@ -140,6 +152,7 @@ export function createZhipu(
   provider.chat = createChatModel;
 
   provider.textEmbeddingModel = createEmbeddingModel;
+  provider.embeddingModel = createEmbeddingModel;
 
   provider.image = createImageModel;
   provider.imageModel = createImageModel;
