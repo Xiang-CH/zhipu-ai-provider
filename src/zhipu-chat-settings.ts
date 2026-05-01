@@ -1,6 +1,7 @@
 // https://bigmodel.cn/dev/howuse/model
 export type ZhipuChatModelId =
   // Language models
+  | "glm-5.1"
   | "glm-5"
   | "glm-5-turbo"
   | "glm-4.7"
