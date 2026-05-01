@@ -1,5 +1,8 @@
 # zhipu-ai-provider
 
+## 0.3.1
+- Added model ID for glm-5.1
+
 ## 0.3.0
 - Support for ai-sdk-v6
 
