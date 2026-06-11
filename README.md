@@ -65,7 +65,7 @@ const { text } = await generateText({
   prompt: 'Why is the sky blue?',
 });
 
-console.log(result)
+console.log(text)
 ```
 
 To disable thinking for hybrid models like `glm-5`, set `thinking.type` to `disabled` either in the model options or in `providerOptions.zhipu`:
@@ -166,4 +166,4 @@ console.log(providerMetadata.zhipu.images[0].url)
 
 ## Maintainer Examples
 
-Runnable maintainer-facing demo scripts live in [examples/README.md](/Users/cxiang/Projects/vercel-ai-provider-zhipu/examples/README.md). They cover text generation, streaming, reasoning, tool calls, vision prompts, embeddings, and image generation.
+Runnable maintainer-facing demo scripts live in [examples/README.md](examples/README.md). They cover text generation, streaming, reasoning, tool calls, vision prompts, embeddings, and image generation.
