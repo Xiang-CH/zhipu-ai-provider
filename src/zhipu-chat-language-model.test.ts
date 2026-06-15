@@ -241,6 +241,32 @@ describe("doGenerate", () => {
     );
   });
 
+  it("should warn when non-vision models receive non-text user parts", async () => {
+    prepareJsonResponse({ content: "" });
+
+    const result = await model.doGenerate({
+      prompt: [
+        { role: "system", content: "You are concise." },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Describe this image" },
+            {
+              type: "file",
+              data: new URL("https://example.com/image.png"),
+              mediaType: "image/png",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.warnings).toContainEqual({
+      type: "other",
+      message: "Non-vision models does not support message parts",
+    });
+  });
+
   it("should pass providerOptions.zhipu and override base args", async () => {
     prepareJsonResponse({ content: "" });
 

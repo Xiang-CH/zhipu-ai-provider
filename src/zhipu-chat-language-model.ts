@@ -91,10 +91,10 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
 
     if (
       !this.config.isMultiModel &&
-      prompt.every(
+      prompt.some(
         (msg) =>
           msg.role === "user" &&
-          !msg.content.every((part) => part.type === "text"),
+          msg.content.some((part) => part.type !== "text"),
       )
     ) {
       warnings.push({
