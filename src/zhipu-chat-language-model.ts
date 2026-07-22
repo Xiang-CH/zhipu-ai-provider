@@ -73,6 +73,75 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
     return { type: "unsupported", feature, details };
   }
 
+  private getZhipuProviderOptions(
+    providerOptions: unknown,
+  ): Record<string, unknown> {
+    if (providerOptions == null || typeof providerOptions !== "object") {
+      return {};
+    }
+
+    const zhipuOptions = (providerOptions as Record<string, unknown>).zhipu;
+
+    return zhipuOptions != null &&
+      typeof zhipuOptions === "object" &&
+      !Array.isArray(zhipuOptions)
+      ? (zhipuOptions as Record<string, unknown>)
+      : {};
+  }
+
+  private getReasoningEffort(zhipuOptions: Record<string, unknown>) {
+    return (
+      zhipuOptions.reasoningEffort ??
+      zhipuOptions.reasoning_effort ??
+      this.settings.reasoningEffort
+    );
+  }
+
+  private isReasoningEffortUnsupportedModel(): boolean {
+    const match = /^glm-(\d+)(?:\.(\d+))?(?:[-_].*)?$/i.exec(this.modelId);
+
+    if (match == null) {
+      return false;
+    }
+
+    const major = Number(match[1]);
+    const minor = Number(match[2] ?? 0);
+
+    return major < 5 || (major === 5 && minor < 2);
+  }
+
+  private addReasoningEffortWarning(
+    warnings: SharedV3Warning[],
+    reasoningEffort: unknown,
+  ): void {
+    if (
+      reasoningEffort !== undefined &&
+      this.isReasoningEffortUnsupportedModel()
+    ) {
+      warnings.push({
+        type: "other",
+        message: `reasoning_effort is not supported by model "${this.modelId}" and will likely be ignored by the upstream API.`,
+      });
+    }
+  }
+
+  private applyZhipuProviderOptions<T extends object>(
+    args: T,
+    zhipuOptions: Record<string, unknown>,
+    reasoningEffort: unknown,
+  ) {
+    const rawZhipuOptions = { ...zhipuOptions };
+    delete rawZhipuOptions.reasoningEffort;
+
+    return {
+      ...args,
+      ...rawZhipuOptions,
+      ...(reasoningEffort !== undefined && {
+        reasoning_effort: reasoningEffort,
+      }),
+    };
+  }
+
   private getArgs({
     prompt,
     maxOutputTokens,
@@ -283,9 +352,14 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
     options: Parameters<LanguageModelV3["doGenerate"]>[0],
   ): Promise<Awaited<ReturnType<LanguageModelV3["doGenerate"]>>> {
     const { args, warnings } = this.getArgs(options);
-    const providerOptions = options.providerOptions || {};
-    const zhipuOptions = providerOptions.zhipu || {};
-    const fullArgs = { ...args, ...zhipuOptions };
+    const zhipuOptions = this.getZhipuProviderOptions(options.providerOptions);
+    const reasoningEffort = this.getReasoningEffort(zhipuOptions);
+    this.addReasoningEffortWarning(warnings, reasoningEffort);
+    const fullArgs = this.applyZhipuProviderOptions(
+      args,
+      zhipuOptions,
+      reasoningEffort,
+    );
 
     const {
       value: response,
@@ -370,9 +444,13 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
     options: Parameters<LanguageModelV3["doStream"]>[0],
   ): Promise<Awaited<ReturnType<LanguageModelV3["doStream"]>>> {
     const { args, warnings } = this.getArgs(options);
-    const providerOptions = options.providerOptions || {};
-    const zhipuOptions = providerOptions.zhipu || {};
-    const body = { ...args, ...zhipuOptions, stream: true };
+    const zhipuOptions = this.getZhipuProviderOptions(options.providerOptions);
+    const reasoningEffort = this.getReasoningEffort(zhipuOptions);
+    this.addReasoningEffortWarning(warnings, reasoningEffort);
+    const body = {
+      ...this.applyZhipuProviderOptions(args, zhipuOptions, reasoningEffort),
+      stream: true,
+    };
 
     const { responseHeaders, value: response } = await postJsonToApi({
       url: `${this.config.baseURL}/chat/completions`,

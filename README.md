@@ -97,6 +97,28 @@ const { text } = await generateText({
 });
 ```
 
+For GLM-5.2 and newer models, use `reasoningEffort` to control how much
+reasoning the model applies. It accepts `max`, `xhigh`, `high`, `medium`,
+`low`, `minimal`, and `none`:
+
+```ts
+const { text } = await generateText({
+  model: zhipu('glm-5.2'),
+  prompt: 'Design a resilient recommendation system.',
+  providerOptions: {
+    zhipu: {
+      thinking: { type: 'enabled' },
+      reasoningEffort: 'high',
+    },
+  },
+});
+```
+
+The provider forwards `reasoningEffort` for any model ID, so future Z.ai
+models do not require a provider update. It warns, without blocking the
+request, when a recognized GLM-5.1-or-earlier model is used because Z.ai will
+likely ignore `reasoning_effort` for those models.
+
 Only function tools are supported. Provider-defined tools are not currently implemented.
 
 ## Embedding Example
