@@ -354,7 +354,7 @@ describe("doGenerate", () => {
     expect(body.reasoning_effort).toBe("minimal");
   });
 
-  it.each(["glm-5.1", "glm-5", "glm-4.7-flash"])(
+  it.each(["glm-5.1", "glm-5", "glm-4.7-flash", "glm-4.6v", "glm-5v-turbo"])(
     "should warn when reasoning effort is used with %s",
     async (modelId) => {
       prepareJsonResponse({ content: "" });

@@ -98,7 +98,9 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
   }
 
   private isReasoningEffortUnsupportedModel(): boolean {
-    const match = /^glm-(\d+)(?:\.(\d+))?(?:[-_].*)?$/i.exec(this.modelId);
+    const match = /^glm-(\d+)(?:\.(\d+))?[a-z]*(?:[-_].*)?$/i.exec(
+      this.modelId,
+    );
 
     if (match == null) {
       return false;
