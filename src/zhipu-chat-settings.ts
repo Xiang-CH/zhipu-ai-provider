@@ -1,6 +1,7 @@
 // https://bigmodel.cn/dev/howuse/model
 export type ZhipuChatModelId =
   // Language models
+  | "glm-5.2"
   | "glm-5.1"
   | "glm-5"
   | "glm-5-turbo"
@@ -25,6 +26,20 @@ export type ZhipuChatModelId =
   | "glm-4.1v-thinking-flash"
   | "glm-4.1v-thinking-flashx"
   | (string & {});
+
+/**
+ * Controls the amount of reasoning GLM-5.2+ applies to a request.
+ *
+ * @see https://docs.z.ai/guides/capabilities/thinking
+ */
+export type ZhipuReasoningEffort =
+  | "max"
+  | "xhigh"
+  | "high"
+  | "medium"
+  | "low"
+  | "minimal"
+  | "none";
 
 /**
  * Thinking mode configuration for GLM-4.5+ models.
@@ -68,4 +83,13 @@ export interface ZhipuChatSettings {
    * @see https://docs.z.ai/guides/llm/glm-4.7
    */
   thinking?: ZhipuThinkingConfig;
+  /**
+   * Controls the reasoning effort for GLM-5.2+ models.
+   *
+   * This does not enable thinking automatically. Set `thinking.type` to
+   * `"enabled"` when deep thinking is required.
+   *
+   * @see https://docs.z.ai/guides/capabilities/thinking
+   */
+  reasoningEffort?: ZhipuReasoningEffort;
 }

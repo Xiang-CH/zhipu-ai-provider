@@ -12,6 +12,7 @@ type ZhipuRequestBody = {
   tool_choice?: string;
   stream?: boolean;
   response_format?: { type: string };
+  reasoning_effort?: string;
 };
 
 const TEST_PROMPT = [
@@ -291,6 +292,131 @@ describe("doGenerate", () => {
     expect(body.user_id).toBe("override-user-id");
     expect(body.temperature).toBe(0.8);
   });
+
+  it.each([
+    "max",
+    "xhigh",
+    "high",
+    "medium",
+    "low",
+    "minimal",
+    "none",
+  ] as const)("should map %s reasoning effort to the API request", async (reasoningEffort) => {
+    prepareJsonResponse({ content: "" });
+
+    await provider
+      .chat("glm-5.2", { reasoningEffort })
+      .doGenerate({ prompt: TEST_PROMPT });
+
+    const calls =
+      server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
+        .calls;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
+    expect(body.reasoning_effort).toBe(reasoningEffort);
+  });
+
+  it("should prefer request-level reasoningEffort and omit its camel-case form", async () => {
+    prepareJsonResponse({ content: "" });
+
+    await provider
+      .chat("glm-5.2", { reasoningEffort: "low" })
+      .doGenerate({
+        prompt: TEST_PROMPT,
+        providerOptions: {
+          zhipu: { reasoningEffort: "high" },
+        },
+      });
+
+    const calls =
+      server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
+        .calls;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
+    expect(body.reasoning_effort).toBe("high");
+    expect(body).not.toHaveProperty("reasoningEffort");
+  });
+
+  it("should preserve raw reasoning_effort provider-option passthrough", async () => {
+    prepareJsonResponse({ content: "" });
+
+    await provider
+      .chat("glm-5.2", { reasoningEffort: "low" })
+      .doGenerate({
+        prompt: TEST_PROMPT,
+        providerOptions: {
+          zhipu: { reasoning_effort: "minimal" },
+        },
+      });
+
+    const calls =
+      server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
+        .calls;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
+    expect(body.reasoning_effort).toBe("minimal");
+  });
+
+  it.each(["glm-5.1", "glm-5", "glm-4.7-flash", "glm-4.6v", "glm-5v-turbo"])(
+    "should warn when reasoning effort is used with %s",
+    async (modelId) => {
+      prepareJsonResponse({ content: "" });
+
+      const result = await provider
+        .chat(modelId, { reasoningEffort: "high" })
+        .doGenerate({ prompt: TEST_PROMPT });
+
+      expect(result.warnings).toContainEqual({
+        type: "other",
+        message: `reasoning_effort is not supported by model "${modelId}" and will likely be ignored by the upstream API.`,
+      });
+    },
+  );
+
+  it("should warn when providerOptions set reasoningEffort for an unsupported model", async () => {
+    prepareJsonResponse({ content: "" });
+
+    const result = await provider.chat("glm-5.1").doGenerate({
+      prompt: TEST_PROMPT,
+      providerOptions: {
+        zhipu: { reasoningEffort: "high" },
+      },
+    });
+
+    expect(result.warnings).toContainEqual({
+      type: "other",
+      message:
+        'reasoning_effort is not supported by model "glm-5.1" and will likely be ignored by the upstream API.',
+    });
+  });
+
+  it.each(["glm-5.2", "glm-5.3", "glm-next"])(
+    "should not warn for supported or unrecognized future model %s",
+    async (modelId) => {
+      prepareJsonResponse({ content: "" });
+
+      const result = await provider
+        .chat(modelId, { reasoningEffort: "high" })
+        .doGenerate({ prompt: TEST_PROMPT });
+
+      expect(result.warnings).not.toContainEqual(
+        expect.objectContaining({
+          message: expect.stringContaining("reasoning_effort is not supported"),
+        }),
+      );
+    },
+  );
+
+  it("should not warn when reasoning effort is omitted", async () => {
+    prepareJsonResponse({ content: "" });
+
+    const result = await provider.chat("glm-5.1").doGenerate({
+      prompt: TEST_PROMPT,
+    });
+
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("reasoning_effort is not supported"),
+      }),
+    );
+  });
 });
 
 describe("doStream", () => {
@@ -384,5 +510,29 @@ describe("doStream", () => {
         },
       ]),
     );
+  });
+
+  it("should map reasoningEffort in streaming requests", async () => {
+    server.urls[
+      "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    ].response = {
+      type: "stream-chunks",
+      chunks: ["data: [DONE]\\n\\n"],
+    };
+
+    await provider.chat("glm-5.2").doStream({
+      prompt: TEST_PROMPT,
+      providerOptions: {
+        zhipu: { reasoningEffort: "high" },
+      },
+    });
+
+    const calls =
+      server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
+        .calls;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
+    expect(body.reasoning_effort).toBe("high");
+    expect(body.stream).toBe(true);
+    expect(body).not.toHaveProperty("reasoningEffort");
   });
 });

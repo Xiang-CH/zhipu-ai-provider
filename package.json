@@ -19,6 +19,7 @@
     "example:generate-text": "node examples/generate-text.mjs",
     "example:stream-text": "node examples/stream-text.mjs",
     "example:generate-text-reasoning": "node examples/generate-text-reasoning.mjs",
+    "example:generate-text-reasoning-effort": "node examples/generate-text-reasoning-effort.mjs",
     "example:generate-text-tool-call": "node examples/generate-text-tool-call.mjs",
     "example:generate-text-with-images": "node examples/generate-text-with-images.mjs",
     "example:embed": "node examples/embed.mjs",
