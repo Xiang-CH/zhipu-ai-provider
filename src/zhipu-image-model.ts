@@ -132,6 +132,12 @@ export class ZhipuImageModel implements ImageModelV4 {
         const imageResponse = await (this.config.fetch ?? fetch)(item.url, {
           signal: abortSignal,
         });
+        if (!imageResponse.ok) {
+          throw new Error(
+            `Failed to download generated image: ${imageResponse.status} ${imageResponse.statusText}`,
+          );
+        }
+        const arrayBuffer = await imageResponse.arrayBuffer();
         const arrayBuffer = await imageResponse.arrayBuffer();
         return new Uint8Array(arrayBuffer);
       }),
