@@ -2,6 +2,7 @@
 
 ## 0.4.0
 - Added support for Zhipu reasoning effort
+- Fixed non-vision warning for mixed prompts
 
 ## 0.3.1
 - Added model ID for glm-5.1
