@@ -97,7 +97,7 @@ describe("doGenerate", () => {
     };
   }
 
-  it("should expose text content and V3 finish/usage shapes", async () => {
+  it("should expose text content and V4 finish/usage shapes", async () => {
     prepareJsonResponse({ content: "Hello, World!" });
 
     const result = await model.doGenerate({
@@ -209,7 +209,7 @@ describe("doGenerate", () => {
     });
   });
 
-  it("should map unsupported settings to V3 warnings", async () => {
+  it("should map unsupported settings to V4 warnings", async () => {
     prepareJsonResponse({ content: "" });
 
     const result = await model.doGenerate({
@@ -254,7 +254,10 @@ describe("doGenerate", () => {
             { type: "text", text: "Describe this image" },
             {
               type: "file",
-              data: new URL("https://example.com/image.png"),
+              data: {
+                type: "url",
+                url: new URL("https://example.com/image.png"),
+              },
               mediaType: "image/png",
             },
           ],
@@ -293,6 +296,36 @@ describe("doGenerate", () => {
     expect(body.temperature).toBe(0.8);
   });
 
+  it("should map the V4 reasoning option to the API request", async () => {
+    prepareJsonResponse({ content: "" });
+
+    await provider.chat("glm-5.2").doGenerate({
+      prompt: TEST_PROMPT,
+      reasoning: "high",
+    });
+
+    const calls =
+      server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
+        .calls;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
+    expect(body.reasoning_effort).toBe("high");
+  });
+
+  it("should let the V4 reasoning option override model settings", async () => {
+    prepareJsonResponse({ content: "" });
+
+    await provider.chat("glm-5.2", { reasoningEffort: "low" }).doGenerate({
+      prompt: TEST_PROMPT,
+      reasoning: "high",
+    });
+
+    const calls =
+      server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
+        .calls;
+    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
+    expect(body.reasoning_effort).toBe("high");
+  });
+
   it.each([
     "max",
     "xhigh",
@@ -301,31 +334,32 @@ describe("doGenerate", () => {
     "low",
     "minimal",
     "none",
-  ] as const)("should map %s reasoning effort to the API request", async (reasoningEffort) => {
-    prepareJsonResponse({ content: "" });
+  ] as const)(
+    "should map %s reasoning effort to the API request",
+    async (reasoningEffort) => {
+      prepareJsonResponse({ content: "" });
 
-    await provider
-      .chat("glm-5.2", { reasoningEffort })
-      .doGenerate({ prompt: TEST_PROMPT });
+      await provider
+        .chat("glm-5.2", { reasoningEffort })
+        .doGenerate({ prompt: TEST_PROMPT });
 
-    const calls =
-      server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
-        .calls;
-    const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
-    expect(body.reasoning_effort).toBe(reasoningEffort);
-  });
+      const calls =
+        server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
+          .calls;
+      const body = calls[calls.length - 1].requestBodyJson as ZhipuRequestBody;
+      expect(body.reasoning_effort).toBe(reasoningEffort);
+    },
+  );
 
   it("should prefer request-level reasoningEffort and omit its camel-case form", async () => {
     prepareJsonResponse({ content: "" });
 
-    await provider
-      .chat("glm-5.2", { reasoningEffort: "low" })
-      .doGenerate({
-        prompt: TEST_PROMPT,
-        providerOptions: {
-          zhipu: { reasoningEffort: "high" },
-        },
-      });
+    await provider.chat("glm-5.2", { reasoningEffort: "low" }).doGenerate({
+      prompt: TEST_PROMPT,
+      providerOptions: {
+        zhipu: { reasoningEffort: "high" },
+      },
+    });
 
     const calls =
       server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
@@ -338,14 +372,12 @@ describe("doGenerate", () => {
   it("should preserve raw reasoning_effort provider-option passthrough", async () => {
     prepareJsonResponse({ content: "" });
 
-    await provider
-      .chat("glm-5.2", { reasoningEffort: "low" })
-      .doGenerate({
-        prompt: TEST_PROMPT,
-        providerOptions: {
-          zhipu: { reasoning_effort: "minimal" },
-        },
-      });
+    await provider.chat("glm-5.2", { reasoningEffort: "low" }).doGenerate({
+      prompt: TEST_PROMPT,
+      providerOptions: {
+        zhipu: { reasoning_effort: "minimal" },
+      },
+    });
 
     const calls =
       server.urls["https://open.bigmodel.cn/api/paas/v4/chat/completions"]
@@ -420,7 +452,7 @@ describe("doGenerate", () => {
 });
 
 describe("doStream", () => {
-  it("should stream V3 events", async () => {
+  it("should stream V4 events", async () => {
     server.urls[
       "https://open.bigmodel.cn/api/paas/v4/chat/completions"
     ].response = {

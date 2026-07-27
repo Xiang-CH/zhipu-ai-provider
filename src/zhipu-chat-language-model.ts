@@ -1,11 +1,11 @@
 import {
   InvalidResponseDataError,
-  LanguageModelV3,
-  LanguageModelV3Content,
-  LanguageModelV3FinishReason,
-  LanguageModelV3StreamPart,
-  LanguageModelV3Usage,
-  SharedV3Warning,
+  LanguageModelV4,
+  LanguageModelV4Content,
+  LanguageModelV4FinishReason,
+  LanguageModelV4StreamPart,
+  LanguageModelV4Usage,
+  SharedV4Warning,
 } from "@ai-sdk/provider";
 import {
   combineHeaders,
@@ -35,8 +35,8 @@ type ZhipuChatConfig = {
 
 type ZhipuWebSearchResult = z.infer<typeof zhipuWebSearchItemSchema>;
 
-export class ZhipuChatLanguageModel implements LanguageModelV3 {
-  readonly specificationVersion = "v3" as const;
+export class ZhipuChatLanguageModel implements LanguageModelV4 {
+  readonly specificationVersion = "v4" as const;
   readonly supportedUrls: Record<string, RegExp[]> = {
     "image/*": [/^data:image\/[a-zA-Z]+;base64,/, /^https?:\/\/.+$/i],
     "video/*": [/^https?:\/\/.+\.(mp4|webm|ogg)$/i],
@@ -69,7 +69,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
   private unsupported(
     feature: string,
     details?: string,
-  ): Extract<SharedV3Warning, { type: "unsupported" }> {
+  ): Extract<SharedV4Warning, { type: "unsupported" }> {
     return { type: "unsupported", feature, details };
   }
 
@@ -89,10 +89,14 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
       : {};
   }
 
-  private getReasoningEffort(zhipuOptions: Record<string, unknown>) {
+  private getReasoningEffort(
+    zhipuOptions: Record<string, unknown>,
+    reasoning: Parameters<LanguageModelV4["doGenerate"]>[0]["reasoning"],
+  ) {
     return (
       zhipuOptions.reasoningEffort ??
       zhipuOptions.reasoning_effort ??
+      (reasoning !== "provider-default" ? reasoning : undefined) ??
       this.settings.reasoningEffort
     );
   }
@@ -113,7 +117,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
   }
 
   private addReasoningEffortWarning(
-    warnings: SharedV3Warning[],
+    warnings: SharedV4Warning[],
     reasoningEffort: unknown,
   ): void {
     if (
@@ -157,8 +161,8 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
     seed,
     tools,
     toolChoice,
-  }: Parameters<LanguageModelV3["doGenerate"]>[0]) {
-    const warnings: SharedV3Warning[] = [];
+  }: Parameters<LanguageModelV4["doGenerate"]>[0]) {
+    const warnings: SharedV4Warning[] = [];
 
     if (
       !this.config.isMultiModel &&
@@ -301,7 +305,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
         }
       | null
       | undefined,
-  ): LanguageModelV3Usage {
+  ): LanguageModelV4Usage {
     return {
       inputTokens: {
         total: usage?.prompt_tokens,
@@ -326,7 +330,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
 
   private buildSourceContent(
     webSearch: ZhipuWebSearchResult[] | ZhipuWebSearchResult | null | undefined,
-  ): LanguageModelV3Content[] {
+  ): LanguageModelV4Content[] {
     const items =
       webSearch == null
         ? []
@@ -351,11 +355,14 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
   }
 
   async doGenerate(
-    options: Parameters<LanguageModelV3["doGenerate"]>[0],
-  ): Promise<Awaited<ReturnType<LanguageModelV3["doGenerate"]>>> {
+    options: Parameters<LanguageModelV4["doGenerate"]>[0],
+  ): Promise<Awaited<ReturnType<LanguageModelV4["doGenerate"]>>> {
     const { args, warnings } = this.getArgs(options);
     const zhipuOptions = this.getZhipuProviderOptions(options.providerOptions);
-    const reasoningEffort = this.getReasoningEffort(zhipuOptions);
+    const reasoningEffort = this.getReasoningEffort(
+      zhipuOptions,
+      options.reasoning,
+    );
     this.addReasoningEffortWarning(warnings, reasoningEffort);
     const fullArgs = this.applyZhipuProviderOptions(
       args,
@@ -381,7 +388,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
 
     const responseData = response as z.infer<typeof zhipuChatResponseSchema>;
     const choice = responseData.choices[0];
-    const content: LanguageModelV3Content[] = [];
+    const content: LanguageModelV4Content[] = [];
     const responseText = choice.message.content;
     const responseReasoningText = choice.message.reasoning_content;
 
@@ -443,11 +450,14 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
   }
 
   async doStream(
-    options: Parameters<LanguageModelV3["doStream"]>[0],
-  ): Promise<Awaited<ReturnType<LanguageModelV3["doStream"]>>> {
+    options: Parameters<LanguageModelV4["doStream"]>[0],
+  ): Promise<Awaited<ReturnType<LanguageModelV4["doStream"]>>> {
     const { args, warnings } = this.getArgs(options);
     const zhipuOptions = this.getZhipuProviderOptions(options.providerOptions);
-    const reasoningEffort = this.getReasoningEffort(zhipuOptions);
+    const reasoningEffort = this.getReasoningEffort(
+      zhipuOptions,
+      options.reasoning,
+    );
     this.addReasoningEffortWarning(warnings, reasoningEffort);
     const body = {
       ...this.applyZhipuProviderOptions(args, zhipuOptions, reasoningEffort),
@@ -472,11 +482,11 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
       hasFinished: boolean;
     }> = [];
 
-    let finishReason: LanguageModelV3FinishReason = {
+    let finishReason: LanguageModelV4FinishReason = {
       unified: "other",
       raw: undefined,
     };
-    let usage: LanguageModelV3Usage = this.mapUsage(undefined);
+    let usage: LanguageModelV4Usage = this.mapUsage(undefined);
     let isFirstChunk = true;
     let isActiveReasoning = false;
     let isActiveText = false;
@@ -485,7 +495,7 @@ export class ZhipuChatLanguageModel implements LanguageModelV3 {
       stream: response.pipeThrough(
         new TransformStream<
           ParseResult<z.infer<typeof zhipuChatChunkSchema>>,
-          LanguageModelV3StreamPart
+          LanguageModelV4StreamPart
         >({
           transform(chunk, controller) {
             if (options.includeRawChunks) {

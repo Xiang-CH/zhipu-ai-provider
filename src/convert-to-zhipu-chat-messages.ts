@@ -1,12 +1,12 @@
 import {
-  LanguageModelV3Prompt,
+  LanguageModelV4Prompt,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 import { convertUint8ArrayToBase64 } from "@ai-sdk/provider-utils";
 import { ZhipuPrompt } from "./zhipu-chat-prompt";
 
 export function convertToZhipuChatMessages(
-  prompt: LanguageModelV3Prompt,
+  prompt: LanguageModelV4Prompt,
 ): ZhipuPrompt {
   const messages: ZhipuPrompt = [];
 
@@ -42,28 +42,31 @@ export function convertToZhipuChatMessages(
                 return { type: "text", text: part.text };
               }
               case "file": {
-                if (part.mediaType.startsWith("image/")) {
+                if (
+                  part.mediaType.startsWith("image/") &&
+                  (part.data.type === "data" || part.data.type === "url")
+                ) {
                   return {
                     type: "image_url",
                     image_url: {
                       url:
-                        part.data instanceof URL
-                          ? part.data.toString()
-                          : typeof part.data === "string"
-                            ? part.data
-                            : `data:${part.mediaType};base64,${convertUint8ArrayToBase64(part.data)}`,
+                        part.data.type === "url"
+                          ? part.data.url.toString()
+                          : typeof part.data.data === "string"
+                            ? `data:${part.mediaType};base64,${part.data.data}`
+                            : `data:${part.mediaType};base64,${convertUint8ArrayToBase64(part.data.data)}`,
                     },
                   };
                 }
 
                 if (
                   part.mediaType.startsWith("video/") &&
-                  part.data instanceof URL
+                  part.data.type === "url"
                 ) {
                   return {
                     type: "video_url",
                     video_url: {
-                      url: part.data.toString(),
+                      url: part.data.url.toString(),
                     },
                   };
                 }
@@ -97,6 +100,12 @@ export function convertToZhipuChatMessages(
             case "tool-result": {
               break;
             }
+            case "reasoning-file":
+            case "custom": {
+              throw new UnsupportedFunctionalityError({
+                functionality: `Assistant ${part.type} content parts`,
+              });
+            }
             case "tool-call": {
               toolCalls.push({
                 id: part.toolCallId,
@@ -126,8 +135,10 @@ export function convertToZhipuChatMessages(
 
       case "tool": {
         for (const toolResponse of content) {
-          if (toolResponse.type !== "tool-result") {
-            continue;
+          if (toolResponse.type === "tool-approval-response") {
+            throw new UnsupportedFunctionalityError({
+              functionality: "Tool approval response content parts",
+            });
           }
 
           const output = toolResponse.output;
