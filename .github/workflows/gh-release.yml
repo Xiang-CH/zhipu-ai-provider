@@ -15,20 +15,20 @@ jobs:
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
       - name: Check version change
         id: version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Get current version
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           
-          # Get previous version
-          git checkout HEAD~1 -- package.json 2>/dev/null || true
-          PREVIOUS_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
-          git checkout HEAD -- package.json
+          # Get the version from the latest GitHub release tag.
+          LATEST_RELEASE_TAG=$(gh release view --json tagName --jq '.tagName' 2>/dev/null || true)
+          PREVIOUS_VERSION=${LATEST_RELEASE_TAG#v}
+          PREVIOUS_VERSION=${PREVIOUS_VERSION:-0.0.0}
           
           echo "previous=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
           
