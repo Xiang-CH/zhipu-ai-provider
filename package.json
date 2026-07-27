@@ -1,6 +1,6 @@
 {
   "name": "zhipu-ai-provider",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Vercel AI SDK Custom Provider for Services from Zhipu (Z.ai)",
   "author": "Chen Xiang",
   "license": "Apache-2.0",

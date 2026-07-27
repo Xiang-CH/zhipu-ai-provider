@@ -1,5 +1,8 @@
 # zhipu-ai-provider
 
+## 0.4.0
+- Added support for Zhipu reasoning effort
+
 ## 0.3.1
 - Added model ID for glm-5.1
 
