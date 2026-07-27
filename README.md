@@ -1,6 +1,6 @@
 # Zhipu AI Provider - Vercel AI SDK Community Provider
 
-This is a [Zhipu](https://www.zhipuai.cn/) (Z.ai) provider for the [Vercel AI SDK](https://ai-sdk.dev/). It supports AI SDK 6 and the `LanguageModelV3` custom-provider contract for language models, plus embedding and image models provided on [bigmodel.cn](https://bigmodel.cn/) or [z.ai](https://docs.z.ai/) by [ZhipuAI](https://www.zhipuai.cn/).
+This is a [Zhipu](https://www.zhipuai.cn/) (Z.ai) provider for the [Vercel AI SDK](https://ai-sdk.dev/). It supports AI SDK 7 and the `ProviderV4` custom-provider contract, including `LanguageModelV4`, `EmbeddingModelV4`, and `ImageModelV4`, for models provided on [bigmodel.cn](https://bigmodel.cn/) or [z.ai](https://docs.z.ai/) by [ZhipuAI](https://www.zhipuai.cn/).
 
 ## Setup
 
@@ -113,6 +113,9 @@ const { text } = await generateText({
   },
 });
 ```
+
+The AI SDK 7 `reasoning` call option is also forwarded as `reasoning_effort`
+unless a Zhipu-specific `reasoningEffort` option is provided.
 
 The provider forwards `reasoningEffort` for any model ID, so future Z.ai
 models do not require a provider update. It warns, without blocking the

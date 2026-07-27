@@ -10,7 +10,7 @@ describe("user messages", () => {
           { type: "text", text: "Hello" },
           {
             type: "file",
-            data: new Uint8Array([0, 1, 2, 3]),
+            data: { type: "data", data: new Uint8Array([0, 1, 2, 3]) },
             mediaType: "image/png",
           },
         ],
@@ -69,5 +69,40 @@ describe("assistant messages", () => {
     ]);
 
     expect(result).toMatchSnapshot();
+  });
+
+  it("should reject unsupported V4 assistant content parts", () => {
+    expect(() =>
+      convertToZhipuChatMessages([
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "custom",
+              kind: "zhipu.thinking",
+            },
+          ],
+        },
+      ]),
+    ).toThrow("Assistant custom content parts");
+  });
+});
+
+describe("tool messages", () => {
+  it("should reject unsupported V4 tool approval responses", () => {
+    expect(() =>
+      convertToZhipuChatMessages([
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-approval-response",
+              approvalId: "approval-1",
+              approved: true,
+            },
+          ],
+        },
+      ]),
+    ).toThrow("Tool approval response content parts");
   });
 });

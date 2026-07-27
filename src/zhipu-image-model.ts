@@ -1,4 +1,4 @@
-import { ImageModelV3 } from "@ai-sdk/provider";
+import { ImageModelV4 } from "@ai-sdk/provider";
 import {
   combineHeaders,
   createJsonErrorResponseHandler,
@@ -24,8 +24,8 @@ export type ZhipuImageModelConfig = {
   };
 };
 
-export class ZhipuImageModel implements ImageModelV3 {
-  readonly specificationVersion = "v3" as const;
+export class ZhipuImageModel implements ImageModelV4 {
+  readonly specificationVersion = "v4" as const;
   readonly maxImagesPerCall = 10;
 
   get provider(): string {
@@ -43,11 +43,13 @@ export class ZhipuImageModel implements ImageModelV3 {
     size,
     aspectRatio,
     seed,
+    files,
+    mask,
     providerOptions,
     headers,
     abortSignal,
-  }: Parameters<ImageModelV3["doGenerate"]>[0]): Promise<
-    Awaited<ReturnType<ImageModelV3["doGenerate"]>>
+  }: Parameters<ImageModelV4["doGenerate"]>[0]): Promise<
+    Awaited<ReturnType<ImageModelV4["doGenerate"]>>
   > {
     const warnings: Array<{
       type: "unsupported";
@@ -78,6 +80,14 @@ export class ZhipuImageModel implements ImageModelV3 {
 
     if (seed != null) {
       warnings.push({ type: "unsupported", feature: "seed" });
+    }
+
+    if (files != null && files.length > 0) {
+      warnings.push({ type: "unsupported", feature: "files" });
+    }
+
+    if (mask != null) {
+      warnings.push({ type: "unsupported", feature: "mask" });
     }
 
     if (
@@ -119,7 +129,9 @@ export class ZhipuImageModel implements ImageModelV3 {
 
     const images = await Promise.all(
       typedResponse.data.map(async (item) => {
-        const imageResponse = await fetch(item.url, { signal: abortSignal });
+        const imageResponse = await (this.config.fetch ?? fetch)(item.url, {
+          signal: abortSignal,
+        });
         const arrayBuffer = await imageResponse.arrayBuffer();
         return new Uint8Array(arrayBuffer);
       }),

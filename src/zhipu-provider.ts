@@ -1,8 +1,8 @@
 import {
-  EmbeddingModelV3,
-  ImageModelV3,
-  LanguageModelV3,
-  ProviderV3,
+  EmbeddingModelV4,
+  ImageModelV4,
+  LanguageModelV4,
+  ProviderV4,
 } from "@ai-sdk/provider";
 import {
   FetchFunction,
@@ -19,38 +19,38 @@ import {
 import { ZhipuImageModel } from "./zhipu-image-model";
 import { ZhipuImageModelId } from "./zhipu-image-options";
 
-export interface ZhipuProvider extends ProviderV3 {
-  (modelId: ZhipuChatModelId, settings?: ZhipuChatSettings): LanguageModelV3;
+export interface ZhipuProvider extends ProviderV4 {
+  (modelId: ZhipuChatModelId, settings?: ZhipuChatSettings): LanguageModelV4;
 
   languageModel(
     modelId: ZhipuChatModelId,
     settings?: ZhipuChatSettings,
-  ): LanguageModelV3;
+  ): LanguageModelV4;
 
   chat(
     modelId: ZhipuChatModelId,
     settings?: ZhipuChatSettings,
-  ): LanguageModelV3;
+  ): LanguageModelV4;
 
   /** @deprecated Use embedding or embeddingModel instead */
   textEmbeddingModel(
     modelId: ZhipuEmbeddingModelId,
     settings?: ZhipuEmbeddingSettings,
-  ): EmbeddingModelV3;
+  ): EmbeddingModelV4;
 
   embedding(
     modelId: ZhipuEmbeddingModelId,
     settings?: ZhipuEmbeddingSettings,
-  ): EmbeddingModelV3;
+  ): EmbeddingModelV4;
 
   embeddingModel(
     modelId: ZhipuEmbeddingModelId,
     settings?: ZhipuEmbeddingSettings,
-  ): EmbeddingModelV3;
+  ): EmbeddingModelV4;
 
-  image(modelId: ZhipuImageModelId): ImageModelV3;
+  image(modelId: ZhipuImageModelId): ImageModelV4;
 
-  imageModel(modelId: ZhipuImageModelId): ImageModelV3;
+  imageModel(modelId: ZhipuImageModelId): ImageModelV4;
 }
 
 export interface ZhipuProviderSettings {
@@ -120,7 +120,7 @@ export function createZhipu(
       return createChatModel(modelId, settings);
     } as unknown as ZhipuProvider,
     {
-      specificationVersion: "v3" as const,
+      specificationVersion: "v4" as const,
       languageModel: createChatModel,
       chat: createChatModel,
       /** @deprecated Use embedding or embeddingModel instead */

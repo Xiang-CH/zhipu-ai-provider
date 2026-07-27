@@ -11,7 +11,7 @@ const provider = getProvider();
 
 const result = streamText({
   model: provider.chat(models.text),
-  prompt: "Write a short release note for migrating a custom AI SDK provider to LanguageModelV3.",
+  prompt: "Write a short release note for migrating a custom AI SDK provider to LanguageModelV4.",
 });
 
 section("Stream");
