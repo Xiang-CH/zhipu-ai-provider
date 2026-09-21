@@ -1,3 +1,5 @@
+
+
 # Zhipu AI Provider - Vercel AI SDK Community Provider
 
 This is a [Zhipu](https://www.zhipuai.cn/) (Z.ai) provider for the [Vercel AI SDK](https://ai-sdk.dev/). It supports AI SDK 6 and the `LanguageModelV3` custom-provider contract for language models, plus embedding and image models provided on [bigmodel.cn](https://bigmodel.cn/) or [z.ai](https://docs.z.ai/) by [ZhipuAI](https://www.zhipuai.cn/).
@@ -138,7 +140,7 @@ console.log(embedding);
 
 ## Image Generation Example
 
-Zhipu supports image generation with `glm-image` or `cogview` models, but the api does not return images in base64 or buffer format, so the image urls are returned in the `providerMetadata` field.
+Zhipu supports image generation with `glm-image` or `cogview` models, but the API returns image URLs, so the provider fetches them and returns binary image data while also exposing the original URLs in the `providerMetadata` field.
 
 ```ts
 import { experimental_generateImage as generateImage } from 'ai';
