@@ -1,5 +1,8 @@
 # zhipu-ai-provider
 
+## 0.4.1
+- Load patched Zod as a runtime dependency instead of bundling it.
+
 ## 0.4.0
 - Added support for Zhipu reasoning effort
 - Fixed non-vision warning for mixed prompts
