@@ -1,6 +1,6 @@
 {
   "name": "zhipu-ai-provider",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Vercel AI SDK Custom Provider for Services from Zhipu (Z.ai)",
   "author": "Chen Xiang",
   "license": "Apache-2.0",
@@ -42,7 +42,8 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "^3.0.3",
-    "@ai-sdk/provider-utils": "^4.0.6"
+    "@ai-sdk/provider-utils": "^4.0.6",
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
@@ -54,8 +55,7 @@
     "tsup": "^8",
     "typescript": "5.6.3",
     "typescript-eslint": "^8.26.0",
-    "vitest": "^3.0.7",
-    "zod": "4.3.5"
+    "vitest": "^3.0.7"
   },
   "engines": {
     "node": ">=18"
